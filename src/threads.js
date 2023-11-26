@@ -607,7 +607,7 @@ Process.prototype.enableLiveCoding = false; // experimental
 Process.prototype.enableSingleStepping = false;
 Process.prototype.enableCompiling = false; // experimental
 Process.prototype.flashTime = 0;
-Process.prototype.enableJS = false;
+Process.prototype.enableJS = true;
 
 function Process(topBlock, receiver, onComplete, yieldFirst) {
     this.topBlock = topBlock || null;
