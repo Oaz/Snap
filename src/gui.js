@@ -91,7 +91,7 @@ modules.gui = '2023-November-23';
 
 // Declarations
 
-var SnapVersion = '9.1.0-dev';
+var SnapVersion = '9.1.0-oaz';
 
 var IDE_Morph;
 var ProjectDialogMorph;
@@ -5272,7 +5272,9 @@ IDE_Morph.prototype.aboutSnap = function () {
         + 'The design of Snap! is influenced and inspired by Scratch,\n'
         + 'from the Lifelong Kindergarten group at the MIT Media Lab\n\n'
 
-        + 'for more information see https://snap.berkeley.edu';
+        + 'for more information see https://snap.berkeley.edu'
+
+        + '\n\nCustom version by Oaz. Source code at: https://github.com/Oaz/Snap';
 
     noticeTxt = localize('License')
         + '\n\n'
