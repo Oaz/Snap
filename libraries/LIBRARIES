@@ -10,7 +10,8 @@ list_comprehension_module.xml	List comprehension	HOF version of ZIP, letting you
 MoreTexts.xml	More texts	Additional text manipulation functions
 MoreLists.xml	More lists	Additional list functions
 Dictionaries.xml	Dictionaries	Data structures associating keys and values using hashmap
-SUnit!.xml	SUnit!	Unit Tests Framework
+SUnit!1.xml	SUnit! v1	Unit Tests Framework v1
+SUnit!2.xml	SUnit! v2	Unit Tests Framework v2
 ~	~
 ~	~
 ~	~
