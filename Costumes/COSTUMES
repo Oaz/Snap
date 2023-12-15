@@ -412,6 +412,31 @@ mouse1-a.svg	mouse1 a
 mouse1-b.svg	mouse1 b
 muffin-a.svg	muffin a
 muffin-b.svg	muffin b
+multibox.svg	multibox
+multibox-empty.svg	multibox empty
+multibox-empty-a.svg	multibox empty a
+multibox-empty-b.svg	multibox empty b
+multibox-hole.svg	multibox hole
+multibox-hole-a.svg	multibox hole a
+multibox-hole-b.svg	multibox hole b
+multibox-horizontal.svg	multibox horizontal
+multibox-horizontal-a.svg	multibox horizontal a
+multibox-horizontal-b.svg	multibox horizontal b
+multibox-vertical.svg	multibox vertical
+multibox-vertical-a.svg	multibox vertical a
+multibox-vertical-b.svg	multibox vertical b
+multibox-up-left.svg	multibox up left
+multibox-up-left-a.svg	multibox up left a
+multibox-up-left-b.svg	multibox up left b
+multibox-up-right.svg	multibox up right
+multibox-up-right-a.svg	multibox up right a
+multibox-up-right-b.svg	multibox up right b
+multibox-down-left.svg	multibox down left
+multibox-down-left-a.svg	multibox down left a
+multibox-down-left-b.svg	multibox down left b
+multibox-down-right.svg	multibox down right
+multibox-down-right-a.svg	multibox down right a
+multibox-down-right-b.svg	multibox down right b
 octopus-a.svg	octopus a
 octopus-b.svg	octopus b
 orange2-a.svg	orange2 a
