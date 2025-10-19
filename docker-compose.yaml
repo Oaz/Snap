@@ -1,0 +1,9 @@
+
+services:
+  snap:
+    image: nginx:stable
+    container_name: snap-nginx
+    volumes:
+      - .:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
