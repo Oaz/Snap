@@ -124,6 +124,8 @@ var dataStructureTyped = (() => {
     FibonacciHeap: () => FibonacciHeap,
     FibonacciHeapNode: () => FibonacciHeapNode,
     HashMap: () => HashMap,
+    HashTable: () => HashTable,
+    HashTableNode: () => HashTableNode,
     Heap: () => Heap,
     IterableElementBase: () => IterableElementBase,
     IterableEntryBase: () => IterableEntryBase,
@@ -133,7 +135,8 @@ var dataStructureTyped = (() => {
     MapEdge: () => MapEdge,
     MapGraph: () => MapGraph,
     MapVertex: () => MapVertex,
-    Matrix: () => Matrix,
+    Matrix2D: () => Matrix2D,
+    MatrixNTI2D: () => MatrixNTI2D,
     MaxHeap: () => MaxHeap,
     MaxPriorityQueue: () => MaxPriorityQueue,
     MinHeap: () => MinHeap,
@@ -160,19 +163,286 @@ var dataStructureTyped = (() => {
     UndirectedEdge: () => UndirectedEdge,
     UndirectedGraph: () => UndirectedGraph,
     UndirectedVertex: () => UndirectedVertex,
+    Vector2D: () => Vector2D,
     arrayRemove: () => arrayRemove,
     calcMinUnitsRequired: () => calcMinUnitsRequired,
     getMSB: () => getMSB,
     isThunk: () => isThunk,
     isWeakKey: () => isWeakKey,
     rangeCheck: () => rangeCheck,
-    roundFixed: () => roundFixed,
     throwRangeError: () => throwRangeError,
     toThunk: () => toThunk,
     trampoline: () => trampoline,
     trampolineAsync: () => trampolineAsync,
     uuidV4: () => uuidV4
   });
+
+  // src/data-structures/hash/hash-table.ts
+  var HashTableNode = class {
+    constructor(key, value) {
+      __publicField(this, "key");
+      __publicField(this, "value");
+      __publicField(this, "next");
+      this.key = key;
+      this.value = value;
+      this.next = void 0;
+    }
+  };
+  var _HashTable = class _HashTable {
+    constructor(capacity = _HashTable.DEFAULT_CAPACITY, hashFn) {
+      __publicField(this, "_capacity");
+      __publicField(this, "_size");
+      __publicField(this, "_buckets");
+      __publicField(this, "_hashFn");
+      this._hashFn = hashFn || this._defaultHashFn;
+      this._capacity = Math.max(capacity, _HashTable.DEFAULT_CAPACITY);
+      this._size = 0;
+      this._buckets = new Array(this._capacity).fill(void 0);
+    }
+    get capacity() {
+      return this._capacity;
+    }
+    get size() {
+      return this._size;
+    }
+    get buckets() {
+      return this._buckets;
+    }
+    get hashFn() {
+      return this._hashFn;
+    }
+    /**
+     * The set function adds a key-value pair to the hash table, handling collisions and resizing if necessary.
+     * @param {K} key - The key parameter represents the key of the key-value pair that you want to insert into the hash
+     * table. It is of type K, which is a generic type representing the key's data type.
+     * @param {V} value - The parameter `value` represents the value that you want to associate with the given key in the hash
+     * table.
+     * @returns Nothing is being returned. The return type of the `put` method is `void`, which means it does not return any
+     * value.
+     */
+    set(key, value) {
+      const index = this._hash(key);
+      const newNode = new HashTableNode(key, value);
+      if (!this._buckets[index]) {
+        this._buckets[index] = newNode;
+      } else {
+        let currentNode = this._buckets[index];
+        while (currentNode) {
+          if (currentNode.key === key) {
+            currentNode.value = value;
+            return;
+          }
+          if (!currentNode.next) {
+            break;
+          }
+          currentNode = currentNode.next;
+        }
+        currentNode.next = newNode;
+      }
+      this._size++;
+      if (this._size / this._capacity >= _HashTable.LOAD_FACTOR) {
+        this._expand();
+      }
+    }
+    /**
+     * The `get` function retrieves the value associated with a given key from a hash table.
+     * @param {K} key - The `key` parameter represents the key of the element that we want to retrieve from the data
+     * structure.
+     * @returns The method is returning the value associated with the given key if it exists in the hash table. If the key is
+     * not found, it returns `undefined`.
+     */
+    get(key) {
+      const index = this._hash(key);
+      let currentNode = this._buckets[index];
+      while (currentNode) {
+        if (currentNode.key === key) {
+          return currentNode.value;
+        }
+        currentNode = currentNode.next;
+      }
+      return void 0;
+    }
+    /**
+     * The delete function removes a key-value pair from a hash table.
+     * @param {K} key - The `key` parameter represents the key of the key-value pair that needs to be removed from the hash
+     * table.
+     * @returns Nothing is being returned. The `delete` method has a return type of `void`, which means it does not return
+     * any value.
+     */
+    delete(key) {
+      const index = this._hash(key);
+      let currentNode = this._buckets[index];
+      let prevNode = void 0;
+      while (currentNode) {
+        if (currentNode.key === key) {
+          if (prevNode) {
+            prevNode.next = currentNode.next;
+          } else {
+            this._buckets[index] = currentNode.next;
+          }
+          this._size--;
+          currentNode.next = void 0;
+          return;
+        }
+        prevNode = currentNode;
+        currentNode = currentNode.next;
+      }
+    }
+    *[Symbol.iterator]() {
+      for (const bucket of this._buckets) {
+        let currentNode = bucket;
+        while (currentNode) {
+          yield [currentNode.key, currentNode.value];
+          currentNode = currentNode.next;
+        }
+      }
+    }
+    forEach(callback) {
+      let index = 0;
+      for (const entry of this) {
+        callback(entry, index, this);
+        index++;
+      }
+    }
+    filter(predicate) {
+      const newTable = new _HashTable();
+      let index = 0;
+      for (const [key, value] of this) {
+        if (predicate([key, value], index, this)) {
+          newTable.set(key, value);
+        }
+        index++;
+      }
+      return newTable;
+    }
+    map(callback) {
+      const newTable = new _HashTable();
+      let index = 0;
+      for (const [key, value] of this) {
+        newTable.set(key, callback([key, value], index, this));
+        index++;
+      }
+      return newTable;
+    }
+    reduce(callback, initialValue) {
+      let accumulator = initialValue;
+      let index = 0;
+      for (const entry of this) {
+        accumulator = callback(accumulator, entry, index, this);
+        index++;
+      }
+      return accumulator;
+    }
+    /**
+     * The function `_defaultHashFn` calculates the hash value of a given key and returns the remainder when divided by the
+     * capacity of the data structure.
+     * @param {K} key - The `key` parameter is the input value that needs to be hashed. It can be of any type, but in this
+     * code snippet, it is checked whether the key is a string or an object. If it is a string, the `_murmurStringHashFn`
+     * function is used to
+     * @returns the hash value of the key modulo the capacity of the data structure.
+     */
+    _defaultHashFn(key) {
+      const hashValue = typeof key === "string" ? this._murmurStringHashFn(key) : this._objectHash(key);
+      return hashValue % this._capacity;
+    }
+    /**
+     * The `_multiplicativeStringHashFn` function calculates a hash value for a given string key using the multiplicative
+     * string hash function.
+     * @param {K} key - The `key` parameter is the input value for which we want to calculate the hash. It can be of any
+     * type, as it is generic (`K`). The function converts the `key` to a string using the `String()` function.
+     * @returns a number, which is the result of the multiplicative string hash function applied to the input key.
+     */
+    _multiplicativeStringHashFn(key) {
+      const keyString = String(key);
+      let hash = 0;
+      for (let i = 0; i < keyString.length; i++) {
+        const charCode = keyString.charCodeAt(i);
+        const A = 0.618033988749895;
+        const M = 1 << 30;
+        hash = (hash * A + charCode) % M;
+      }
+      return Math.abs(hash);
+    }
+    /**
+     * The function `_murmurStringHashFn` calculates a hash value for a given string key using the MurmurHash algorithm.
+     * @param {K} key - The `key` parameter is the input value for which you want to calculate the hash. It can be of any
+     * type, but it will be converted to a string using the `String()` function before calculating the hash.
+     * @returns a number, which is the hash value calculated for the given key.
+     */
+    _murmurStringHashFn(key) {
+      const keyString = String(key);
+      const seed = 0;
+      let hash = seed;
+      for (let i = 0; i < keyString.length; i++) {
+        const char = keyString.charCodeAt(i);
+        hash = (hash ^ char) * 1540483477;
+        hash = (hash ^ hash >>> 15) * 668265261;
+        hash = hash ^ hash >>> 15;
+      }
+      return Math.abs(hash);
+    }
+    /**
+     * The _hash function takes a key and returns a number.
+     * @param {K} key - The parameter "key" is of type K, which represents the type of the key that will be hashed.
+     * @returns The hash function is returning a number.
+     */
+    _hash(key) {
+      return this.hashFn(key);
+    }
+    /**
+     * The function calculates a hash value for a given string using the djb2 algorithm.
+     * @param {string} key - The `key` parameter in the `stringHash` function is a string value that represents the input for
+     * which we want to calculate the hash value.
+     * @returns a number, which is the hash value of the input string.
+     */
+    _stringHash(key) {
+      let hash = 0;
+      for (let i = 0; i < key.length; i++) {
+        hash = hash * 31 + key.charCodeAt(i) & 4294967295;
+      }
+      return hash;
+    }
+    /**
+     * The function `_objectHash` takes a key and returns a hash value, using a custom hash function for objects.
+     * @param {K} key - The parameter "key" is of type "K", which means it can be any type. It could be a string, number,
+     * boolean, object, or any other type of value. The purpose of the objectHash function is to generate a hash value for
+     * the key, which can be used for
+     * @returns a number, which is the hash value of the key.
+     */
+    _objectHash(key) {
+      return this._stringHash(JSON.stringify(key));
+    }
+    /**
+     * The `expand` function increases the capacity of a hash table by creating a new array of buckets with double the
+     * capacity and rehashing all the existing key-value pairs into the new buckets.
+     */
+    _expand() {
+      const newCapacity = this._capacity * 2;
+      const newBuckets = new Array(newCapacity).fill(void 0);
+      for (const bucket of this._buckets) {
+        let currentNode = bucket;
+        while (currentNode) {
+          const newIndex = this._hash(currentNode.key);
+          const newNode = new HashTableNode(currentNode.key, currentNode.value);
+          if (!newBuckets[newIndex]) {
+            newBuckets[newIndex] = newNode;
+          } else {
+            let currentNewNode = newBuckets[newIndex];
+            while (currentNewNode.next) {
+              currentNewNode = currentNewNode.next;
+            }
+            currentNewNode.next = newNode;
+          }
+          currentNode = currentNode.next;
+        }
+      }
+      this._buckets = newBuckets;
+      this._capacity = newCapacity;
+    }
+  };
+  __publicField(_HashTable, "DEFAULT_CAPACITY", 16);
+  __publicField(_HashTable, "LOAD_FACTOR", 0.75);
+  var HashTable = _HashTable;
 
   // src/data-structures/base/iterable-base.ts
   var IterableEntryBase = class {
@@ -577,53 +847,32 @@ var dataStructureTyped = (() => {
     return inputType === "object" && input !== null || inputType === "function";
   };
   var calcMinUnitsRequired = (totalQuantity, unitSize) => Math.floor((totalQuantity + unitSize - 1) / unitSize);
-  var roundFixed = (num, digit = 10) => {
-    const multiplier = Math.pow(10, digit);
-    return Math.round(num * multiplier) / multiplier;
-  };
 
   // src/data-structures/hash/hash-map.ts
   var HashMap = class _HashMap extends IterableEntryBase {
     /**
-     * The constructor function initializes a HashMap object with an optional initial collection and
-     * options.
-     * @param rawCollection - The `rawCollection` parameter is an iterable collection of elements of type
-     * `T`. It is an optional parameter and its default value is an empty array `[]`.
-     * @param [options] - The `options` parameter is an optional object that can contain two properties:
+     * The constructor function initializes a new instance of a class with optional elements and options.
+     * @param elements - The `elements` parameter is an iterable containing key-value pairs `[K, V]`. It
+     * is optional and defaults to an empty array `[]`. This parameter is used to initialize the map with
+     * key-value pairs.
+     * @param [options] - The `options` parameter is an optional object that can contain additional
+     * configuration options for the constructor. In this case, it has one property:
      */
-    constructor(rawCollection = [], options) {
+    constructor(elements = [], options) {
       super();
       __publicField(this, "_store", {});
       __publicField(this, "_objMap", /* @__PURE__ */ new Map());
-      __publicField(this, "_toEntryFn", (rawElement) => {
-        if (this.isEntry(rawElement)) {
-          return rawElement;
-        } else {
-          throw new Error(
-            "If the provided rawCollection does not adhere to the [key, value] type format, the toEntryFn in the constructor's options parameter needs to specified."
-          );
-        }
-      });
       __publicField(this, "_size", 0);
       __publicField(this, "_hashFn", (key) => String(key));
       if (options) {
-        const { hashFn, toEntryFn } = options;
+        const { hashFn } = options;
         if (hashFn) {
           this._hashFn = hashFn;
         }
-        if (toEntryFn) {
-          this._toEntryFn = toEntryFn;
-        }
       }
-      if (rawCollection) {
-        this.setMany(rawCollection);
+      if (elements) {
+        this.setMany(elements);
       }
-    }
-    get toEntryFn() {
-      return this._toEntryFn;
-    }
-    isEntry(rawElement) {
-      return Array.isArray(rawElement) && rawElement.length === 2;
     }
     get size() {
       return this._size;
@@ -661,18 +910,14 @@ var dataStructureTyped = (() => {
       return true;
     }
     /**
-     * The function `setMany` takes an iterable collection of objects, maps each object to a key-value
-     * pair using a mapping function, and sets each key-value pair in the current object.
-     * @param rawCollection - The `rawCollection` parameter is an iterable collection of elements of type
-     * `T`.
-     * @returns The `setMany` function is returning an array of booleans.
+     * The function "setMany" sets multiple key-value pairs in a map.
+     * @param elements - The `elements` parameter is an iterable containing key-value pairs. Each
+     * key-value pair is represented as an array with two elements: the key and the value.
      */
-    setMany(rawCollection) {
+    setMany(elements) {
       const results = [];
-      for (const rawEle of rawCollection) {
-        const [key, value] = this.toEntryFn(rawEle);
+      for (const [key, value] of elements)
         results.push(this.set(key, value));
-      }
       return results;
     }
     /**
@@ -785,6 +1030,9 @@ var dataStructureTyped = (() => {
       }
       return filteredMap;
     }
+    print() {
+      console.log([...this.entries()]);
+    }
     put(key, value) {
       return this.set(key, value);
     }
@@ -820,31 +1068,26 @@ var dataStructureTyped = (() => {
     }
   };
   var LinkedHashMap = class _LinkedHashMap extends IterableEntryBase {
-    constructor(entries, options) {
+    constructor(elements, options = {
+      hashFn: (key) => String(key),
+      objHashFn: (key) => key
+    }) {
       super();
       __publicField(this, "_noObjMap", {});
       __publicField(this, "_objMap", /* @__PURE__ */ new WeakMap());
       __publicField(this, "_head");
       __publicField(this, "_tail");
       __publicField(this, "_sentinel");
+      __publicField(this, "_hashFn");
+      __publicField(this, "_objHashFn");
       __publicField(this, "_size", 0);
-      /**
-       * Time Complexity: O(n)
-       * Space Complexity: O(n)
-       */
-      __publicField(this, "_hashFn", (key) => String(key));
-      __publicField(this, "_objHashFn", (key) => key);
       this._sentinel = {};
       this._sentinel.prev = this._sentinel.next = this._head = this._tail = this._sentinel;
-      if (options) {
-        const { hashFn, objHashFn } = options;
-        if (hashFn)
-          this._hashFn = hashFn;
-        if (objHashFn)
-          this._objHashFn = objHashFn;
-      }
-      if (entries) {
-        for (const el of entries) {
+      const { hashFn, objHashFn } = options;
+      this._hashFn = hashFn;
+      this._objHashFn = objHashFn;
+      if (elements) {
+        for (const el of elements) {
           this.set(el[0], el[1]);
         }
       }
@@ -1068,7 +1311,7 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(1)
      * Space Complexity: O(1)
      *
-     * The `clear` function clears all the entries in a data structure and resets its properties.
+     * The `clear` function clears all the elements in a data structure and resets its properties.
      */
     clear() {
       this._noObjMap = {};
@@ -1083,6 +1326,10 @@ var dataStructureTyped = (() => {
       }
       return cloned;
     }
+    /**
+     * Time Complexity: O(n)
+     * Space Complexity: O(n)
+     */
     /**
      * Time Complexity: O(n)
      * Space Complexity: O(n)
@@ -1112,6 +1359,10 @@ var dataStructureTyped = (() => {
     /**
      * Time Complexity: O(n)
      * Space Complexity: O(n)
+     */
+    /**
+     * Time Complexity: O(n)
+     * Space Complexity: O(n)
      *
      * The `map` function in TypeScript creates a new `LinkedHashMap` by applying a callback function to
      * each key-value pair in the original map.
@@ -1136,15 +1387,11 @@ var dataStructureTyped = (() => {
       }
       return mappedMap;
     }
-    /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(n)
-     */
     put(key, value) {
       return this.set(key, value);
     }
     /**
-     * Time Complexity: O(n), where n is the number of entries in the LinkedHashMap.
+     * Time Complexity: O(n), where n is the number of elements in the LinkedHashMap.
      * Space Complexity: O(1)
      *
      * The above function is an iterator that yields key-value pairs from a linked list.
@@ -1199,11 +1446,14 @@ var dataStructureTyped = (() => {
     /**
      * The constructor initializes the linked list with an empty head, tail, and length.
      */
-    constructor(elements = []) {
+    constructor(elements) {
       super();
       __publicField(this, "_head");
       __publicField(this, "_tail");
-      __publicField(this, "_size", 0);
+      __publicField(this, "_size");
+      this._head = void 0;
+      this._tail = void 0;
+      this._size = 0;
       if (elements) {
         for (const el of elements)
           this.push(el);
@@ -1873,7 +2123,7 @@ var dataStructureTyped = (() => {
     /**
      * The constructor initializes the linked list with an empty head, tail, and size.
      */
-    constructor(elements = []) {
+    constructor(elements) {
       super();
       __publicField(this, "_head");
       __publicField(this, "_tail");
@@ -1899,36 +2149,6 @@ var dataStructureTyped = (() => {
     /**
      * Time Complexity: O(n), where n is the size of the input array.
      * Space Complexity: O(n)
-     */
-    /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(1)
-     *
-     * The `get first` function returns the first node in a doubly linked list, or undefined if the list is empty.
-     * @returns The method `get first()` returns the first node of the doubly linked list, or `undefined` if the list is empty.
-     */
-    get first() {
-      var _a;
-      return (_a = this.head) == null ? void 0 : _a.value;
-    }
-    /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     */
-    /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(1)
-     *
-     * The `get last` function returns the last node in a doubly linked list, or undefined if the list is empty.
-     * @returns The method `get last()` returns the last node of the doubly linked list, or `undefined` if the list is empty.
-     */
-    get last() {
-      var _a;
-      return (_a = this.tail) == null ? void 0 : _a.value;
-    }
-    /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
      */
     /**
      * Time Complexity: O(n), where n is the size of the input array.
@@ -1997,7 +2217,7 @@ var dataStructureTyped = (() => {
       return removedNode.value;
     }
     /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Time Complexity: O(1)
      * Space Complexity: O(1)
      */
     /**
@@ -2023,7 +2243,7 @@ var dataStructureTyped = (() => {
       return removedNode.value;
     }
     /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Time Complexity: O(1)
      * Space Complexity: O(1)
      */
     /**
@@ -2237,6 +2457,10 @@ var dataStructureTyped = (() => {
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
      * Space Complexity: O(1)
+     */
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
      *
      * The `deleteAt` function removes an element at a specified index from a linked list and returns the removed element.
      * @param {number} index - The index parameter represents the position of the element that needs to be deleted in the
@@ -2263,6 +2487,10 @@ var dataStructureTyped = (() => {
       this._size--;
       return true;
     }
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
+     */
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
      * Space Complexity: O(1)
@@ -2297,20 +2525,12 @@ var dataStructureTyped = (() => {
       return false;
     }
     /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(1)
-     */
-    /**
      * The function checks if a variable has a size greater than zero and returns a boolean value.
      * @returns A boolean value is being returned.
      */
     isEmpty() {
       return this.size === 0;
     }
-    /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(1)
-     */
     /**
      * The `clear` function resets the linked list by setting the head, tail, and size to undefined and 0 respectively.
      */
@@ -2371,7 +2591,7 @@ var dataStructureTyped = (() => {
     }
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(n)
+     * Space Complexity: O(1)
      */
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
@@ -2396,7 +2616,7 @@ var dataStructureTyped = (() => {
     }
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
-     * Space Complexity: O(n)
+     * Space Complexity: O(1)
      */
     /**
      * Time Complexity: O(n), where n is the number of elements in the linked list.
@@ -2415,7 +2635,7 @@ var dataStructureTyped = (() => {
       return this;
     }
     /**
-     * Time Complexity: O(n)
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
      * Space Complexity: O(n)
      */
     /**
@@ -2455,8 +2675,8 @@ var dataStructureTyped = (() => {
       return array;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(n)
+     * Space Complexity: O(n)
      */
     /**
      * Time Complexity: O(n)
@@ -2487,8 +2707,8 @@ var dataStructureTyped = (() => {
       return filteredList;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(n)
      */
     /**
      * Time Complexity: O(n)
@@ -2546,7 +2766,7 @@ var dataStructureTyped = (() => {
       return this.pop();
     }
     /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Time Complexity: O(1)
      * Space Complexity: O(1)
      */
     /**
@@ -2561,7 +2781,7 @@ var dataStructureTyped = (() => {
       return this.shift();
     }
     /**
-     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Time Complexity: O(1)
      * Space Complexity: O(1)
      */
     /**
@@ -2574,6 +2794,36 @@ var dataStructureTyped = (() => {
      */
     addFirst(value) {
       this.unshift(value);
+    }
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
+     */
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
+     *
+     * The `get first` function returns the first node in a doubly linked list, or undefined if the list is empty.
+     * @returns The method `get first()` returns the first node of the doubly linked list, or `undefined` if the list is empty.
+     */
+    get first() {
+      var _a;
+      return (_a = this.head) == null ? void 0 : _a.value;
+    }
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
+     */
+    /**
+     * Time Complexity: O(n), where n is the number of elements in the linked list.
+     * Space Complexity: O(1)
+     *
+     * The `get last` function returns the last node in a doubly linked list, or undefined if the list is empty.
+     * @returns The method `get last()` returns the last node of the doubly linked list, or `undefined` if the list is empty.
+     */
+    get last() {
+      var _a;
+      return (_a = this.tail) == null ? void 0 : _a.value;
     }
     /**
      * The function returns an iterator that iterates over the values of a linked list.
@@ -2599,22 +2849,22 @@ var dataStructureTyped = (() => {
     }
   };
   var SkipList = class {
-    constructor(elements = [], options) {
-      __publicField(this, "_head", new SkipListNode(void 0, void 0, this.maxLevel));
-      __publicField(this, "_level", 0);
-      __publicField(this, "_maxLevel", 16);
-      __publicField(this, "_probability", 0.5);
-      if (options) {
-        const { maxLevel, probability } = options;
-        if (typeof maxLevel === "number")
-          this._maxLevel = maxLevel;
-        if (typeof probability === "number")
-          this._probability = probability;
-      }
-      if (elements) {
-        for (const [key, value] of elements)
-          this.add(key, value);
-      }
+    /**
+     * The constructor initializes a SkipList with a specified maximum level and probability.
+     * @param [maxLevel=16] - The `maxLevel` parameter represents the maximum level that a skip list can have. It determines
+     * the maximum number of levels that can be created in the skip list.
+     * @param [probability=0.5] - The probability parameter represents the probability of a node being promoted to a higher
+     * level in the skip list. It is used to determine the height of each node in the skip list.
+     */
+    constructor(maxLevel = 16, probability = 0.5) {
+      __publicField(this, "_head");
+      __publicField(this, "_level");
+      __publicField(this, "_maxLevel");
+      __publicField(this, "_probability");
+      this._head = new SkipListNode(void 0, void 0, maxLevel);
+      this._level = 0;
+      this._maxLevel = maxLevel;
+      this._probability = probability;
     }
     get head() {
       return this._head;
@@ -2627,41 +2877,6 @@ var dataStructureTyped = (() => {
     }
     get probability() {
       return this._probability;
-    }
-    /**
-     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
-     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
-     */
-    /**
-     * Time Complexity: O(1) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
-     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
-     *
-     * Get the value of the first element (the smallest element) in the Skip List.
-     * @returns The value of the first element, or undefined if the Skip List is empty.
-     */
-    get first() {
-      const firstNode = this.head.forward[0];
-      return firstNode ? firstNode.value : void 0;
-    }
-    /**
-     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
-     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
-     */
-    /**
-     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
-     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
-     *
-     * Get the value of the last element (the largest element) in the Skip List.
-     * @returns The value of the last element, or undefined if the Skip List is empty.
-     */
-    get last() {
-      let current = this.head;
-      for (let i = this.level - 1; i >= 0; i--) {
-        while (current.forward[i]) {
-          current = current.forward[i];
-        }
-      }
-      return current.value;
     }
     /**
      * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
@@ -2721,7 +2936,7 @@ var dataStructureTyped = (() => {
       return void 0;
     }
     /**
-     * Time Complexity: O(1) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
+     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
      * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
      */
     /**
@@ -2767,6 +2982,41 @@ var dataStructureTyped = (() => {
         return true;
       }
       return false;
+    }
+    /**
+     * Time Complexity: O(1) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
+     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
+     */
+    /**
+     * Time Complexity: O(1) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
+     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
+     *
+     * Get the value of the first element (the smallest element) in the Skip List.
+     * @returns The value of the first element, or undefined if the Skip List is empty.
+     */
+    get first() {
+      const firstNode = this.head.forward[0];
+      return firstNode ? firstNode.value : void 0;
+    }
+    /**
+     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
+     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
+     */
+    /**
+     * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
+     * Space Complexity: O(1) - constant space, as it uses a fixed amount of space regardless of the size of the SkipList.
+     *
+     * Get the value of the last element (the largest element) in the Skip List.
+     * @returns The value of the last element, or undefined if the Skip List is empty.
+     */
+    get last() {
+      let current = this.head;
+      for (let i = this.level - 1; i >= 0; i--) {
+        while (current.forward[i]) {
+          current = current.forward[i];
+        }
+      }
+      return current.value;
     }
     /**
      * Time Complexity: O(log n) - where n is the number of elements in the SkipList, as it traverses the levels of the SkipList.
@@ -2843,12 +3093,14 @@ var dataStructureTyped = (() => {
      * of elements of type `E`. It is used to initialize the `_elements` property of the class. If the `elements` parameter
      * is provided and is an array, it is assigned to the `_elements
      */
-    constructor(elements = []) {
+    constructor(elements) {
       super();
-      __publicField(this, "_elements", []);
+      __publicField(this, "_elements");
+      this._elements = [];
       if (elements) {
-        for (const el of elements)
+        for (const el of elements) {
           this.push(el);
+        }
       }
     }
     get elements() {
@@ -3040,20 +3292,18 @@ var dataStructureTyped = (() => {
     /**
      * The constructor initializes an instance of a class with an optional array of elements and sets the offset to 0.
      * @param {E[]} [elements] - The `elements` parameter is an optional array of elements of type `E`. If provided, it
-     * will be used to initialize the `_elements` property of the class. If not provided, the `_elements` property will be
+     * will be used to initialize the `_nodes` property of the class. If not provided, the `_nodes` property will be
      * initialized as an empty array.
      */
-    constructor(elements = []) {
+    constructor(elements) {
       super();
-      __publicField(this, "_elements", []);
-      __publicField(this, "_offset", 0);
-      if (elements) {
-        for (const el of elements)
-          this.push(el);
-      }
+      __publicField(this, "_nodes");
+      __publicField(this, "_offset");
+      this._nodes = elements || [];
+      this._offset = 0;
     }
-    get elements() {
-      return this._elements;
+    get nodes() {
+      return this._nodes;
     }
     get offset() {
       return this._offset;
@@ -3063,38 +3313,8 @@ var dataStructureTyped = (() => {
      * @returns {number} The size of the array, which is the difference between the length of the array and the offset.
      */
     get size() {
-      return this.elements.length - this.offset;
+      return this.nodes.length - this.offset;
     }
-    /**
-     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
-     * Space Complexity: O(1) - no additional space is used.
-     *
-     * The `first` function returns the first element of the array `_elements` if it exists, otherwise it returns `undefined`.
-     * @returns The `get first()` method returns the first element of the data structure, represented by the `_elements` array at
-     * the `_offset` index. If the data structure is empty (size is 0), it returns `undefined`.
-     */
-    get first() {
-      return this.size > 0 ? this.elements[this.offset] : void 0;
-    }
-    /**
-     * Time Complexity: O(1) - constant time as it adds an element to the end of the array.
-     * Space Complexity: O(1) - no additional space is used.
-     */
-    /**
-     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
-     * Space Complexity: O(1) - no additional space is used.
-     *
-     * The `last` function returns the last element in an array-like data structure, or undefined if the structure is empty.
-     * @returns The method `get last()` returns the last element of the `_elements` array if the array is not empty. If the
-     * array is empty, it returns `undefined`.
-     */
-    get last() {
-      return this.size > 0 ? this.elements[this.elements.length - 1] : void 0;
-    }
-    /**
-     * Time Complexity: O(n) - where n is the number of elements in the queue. In the worst case, it may need to shift all elements to update the offset.
-     * Space Complexity: O(1) - no additional space is used.
-     */
     /**
      * The function "fromArray" creates a new Queue object from an array of elements.Creates a queue from an existing array.
      * @public
@@ -3107,7 +3327,7 @@ var dataStructureTyped = (() => {
       return new _Queue(elements);
     }
     /**
-     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Time Complexity: O(1) - constant time as it adds an element to the end of the array.
      * Space Complexity: O(1) - no additional space is used.
      */
     /**
@@ -3119,11 +3339,11 @@ var dataStructureTyped = (() => {
      * @returns The `add` method is returning a `Queue<E>` object.
      */
     push(element) {
-      this.elements.push(element);
+      this.nodes.push(element);
       return true;
     }
     /**
-     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Time Complexity: O(n) - where n is the number of elements in the queue. In the worst case, it may need to shift all elements to update the offset.
      * Space Complexity: O(1) - no additional space is used.
      */
     /**
@@ -3139,9 +3359,9 @@ var dataStructureTyped = (() => {
         return void 0;
       const first = this.first;
       this._offset += 1;
-      if (this.offset * 2 < this.elements.length)
+      if (this.offset * 2 < this.nodes.length)
         return first;
-      this._elements = this.elements.slice(this.offset);
+      this._nodes = this.nodes.slice(this.offset);
       this._offset = 0;
       return first;
     }
@@ -3153,8 +3373,23 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
      * Space Complexity: O(1) - no additional space is used.
      *
-     * The `peek` function returns the first element of the array `_elements` if it exists, otherwise it returns `undefined`.
-     * @returns The `peek()` method returns the first element of the data structure, represented by the `_elements` array at
+     * The `first` function returns the first element of the array `_nodes` if it exists, otherwise it returns `undefined`.
+     * @returns The `get first()` method returns the first element of the data structure, represented by the `_nodes` array at
+     * the `_offset` index. If the data structure is empty (size is 0), it returns `undefined`.
+     */
+    get first() {
+      return this.size > 0 ? this.nodes[this.offset] : void 0;
+    }
+    /**
+     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Space Complexity: O(1) - no additional space is used.
+     */
+    /**
+     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Space Complexity: O(1) - no additional space is used.
+     *
+     * The `peek` function returns the first element of the array `_nodes` if it exists, otherwise it returns `undefined`.
+     * @returns The `peek()` method returns the first element of the data structure, represented by the `_nodes` array at
      * the `_offset` index. If the data structure is empty (size is 0), it returns `undefined`.
      */
     peek() {
@@ -3168,8 +3403,23 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
      * Space Complexity: O(1) - no additional space is used.
      *
+     * The `last` function returns the last element in an array-like data structure, or undefined if the structure is empty.
+     * @returns The method `get last()` returns the last element of the `_nodes` array if the array is not empty. If the
+     * array is empty, it returns `undefined`.
+     */
+    get last() {
+      return this.size > 0 ? this.nodes[this.nodes.length - 1] : void 0;
+    }
+    /**
+     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Space Complexity: O(1) - no additional space is used.
+     */
+    /**
+     * Time Complexity: O(1) - constant time as it retrieves the value at the current offset.
+     * Space Complexity: O(1) - no additional space is used.
+     *
      * The `peekLast` function returns the last element in an array-like data structure, or undefined if the structure is empty.
-     * @returns The method `peekLast()` returns the last element of the `_elements` array if the array is not empty. If the
+     * @returns The method `peekLast()` returns the last element of the `_nodes` array if the array is not empty. If the
      * array is empty, it returns `undefined`.
      */
     peekLast() {
@@ -3214,7 +3464,7 @@ var dataStructureTyped = (() => {
      * @param index
      */
     getAt(index) {
-      return this.elements[index];
+      return this.nodes[index];
     }
     /**
      * Time Complexity: O(1) - constant time as it retrieves the value at the specified index.
@@ -3238,17 +3488,17 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(1) - constant time as it returns a shallow copy of the internal array.
      * Space Complexity: O(n) - where n is the number of elements in the queue.
      *
-     * The toArray() function returns an array of elements from the current offset to the end of the _elements array.
+     * The toArray() function returns an array of elements from the current offset to the end of the _nodes array.
      * @returns An array of type E is being returned.
      */
     toArray() {
-      return this.elements.slice(this.offset);
+      return this.nodes.slice(this.offset);
     }
     /**
-     * The clear function resets the elements array and offset to their initial values.
+     * The clear function resets the nodes array and offset to their initial values.
      */
     clear() {
-      this._elements = [];
+      this._nodes = [];
       this._offset = 0;
     }
     /**
@@ -3263,7 +3513,7 @@ var dataStructureTyped = (() => {
      * @returns The `clone()` method is returning a new instance of the `Queue` class.
      */
     clone() {
-      return new _Queue(this.elements.slice(this.offset));
+      return new _Queue(this.nodes.slice(this.offset));
     }
     /**
      * Time Complexity: O(n)
@@ -3328,20 +3578,12 @@ var dataStructureTyped = (() => {
      * Space Complexity: O(n)
      */
     *_getIterator() {
-      for (const item of this.elements) {
+      for (const item of this.nodes) {
         yield item;
       }
     }
   };
   var LinkedListQueue = class extends SinglyLinkedList {
-    /**
-     * The `get first` function returns the value of the head node in a linked list, or `undefined` if the list is empty.
-     * @returns The `get first()` method is returning the value of the `head` node if it exists, otherwise it returns `undefined`.
-     */
-    get first() {
-      var _a;
-      return (_a = this.head) == null ? void 0 : _a.value;
-    }
     /**
      * The enqueue function adds a value to the end of an array.
      * @param {E} value - The value parameter represents the value that you want to add to the queue.
@@ -3357,6 +3599,14 @@ var dataStructureTyped = (() => {
       return this.shift();
     }
     /**
+     * The `get first` function returns the value of the head node in a linked list, or `undefined` if the list is empty.
+     * @returns The `get first()` method is returning the value of the `head` node if it exists, otherwise it returns `undefined`.
+     */
+    get first() {
+      var _a;
+      return (_a = this.head) == null ? void 0 : _a.value;
+    }
+    /**
      * The `peek` function returns the value of the head node in a linked list, or `undefined` if the list is empty.
      * @returns The `peek()` method is returning the value of the `head` node if it exists, otherwise it returns `undefined`.
      */
@@ -3367,21 +3617,25 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/queue/deque.ts
   var Deque = class _Deque extends IterableElementBase {
-    constructor(elements = [], options) {
+    /**
+     * The constructor initializes a data structure with a specified bucket size and populates it with
+     * elements from an iterable.
+     * @param elements - The `elements` parameter is an iterable object (such as an array or a Set) that
+     * contains the initial elements to be stored in the data structure. It can also be an object with a
+     * `length` property or a `size` property, which represents the number of elements in the iterable.
+     * @param bucketSize - The `bucketSize` parameter is the maximum number of elements that can be
+     * stored in each bucket. It determines the size of each bucket in the data structure.
+     */
+    constructor(elements = [], bucketSize = 1 << 12) {
       super();
       __publicField(this, "_bucketFirst", 0);
       __publicField(this, "_firstInBucket", 0);
       __publicField(this, "_bucketLast", 0);
       __publicField(this, "_lastInBucket", 0);
       __publicField(this, "_bucketCount", 0);
-      __publicField(this, "_bucketSize", 1 << 12);
+      __publicField(this, "_bucketSize");
       __publicField(this, "_buckets", []);
       __publicField(this, "_size", 0);
-      if (options) {
-        const { bucketSize } = options;
-        if (typeof bucketSize === "number")
-          this._bucketSize = bucketSize;
-      }
       let _size;
       if ("length" in elements) {
         if (elements.length instanceof Function)
@@ -3394,6 +3648,7 @@ var dataStructureTyped = (() => {
         else
           _size = elements.size;
       }
+      this._bucketSize = bucketSize;
       this._bucketCount = calcMinUnitsRequired(_size, this._bucketSize) || 1;
       for (let i = 0; i < this._bucketCount; ++i) {
         this._buckets.push(new Array(this._bucketSize));
@@ -3604,7 +3859,10 @@ var dataStructureTyped = (() => {
      */
     getAt(pos) {
       rangeCheck(pos, 0, this.size - 1);
-      const { bucketIndex, indexInBucket } = this._getBucketAndPosition(pos);
+      const {
+        bucketIndex,
+        indexInBucket
+      } = this._getBucketAndPosition(pos);
       return this._buckets[bucketIndex][indexInBucket];
     }
     /**
@@ -3623,7 +3881,10 @@ var dataStructureTyped = (() => {
      */
     setAt(pos, element) {
       rangeCheck(pos, 0, this.size - 1);
-      const { bucketIndex, indexInBucket } = this._getBucketAndPosition(pos);
+      const {
+        bucketIndex,
+        indexInBucket
+      } = this._getBucketAndPosition(pos);
       this._buckets[bucketIndex][indexInBucket] = element;
       return true;
     }
@@ -3687,7 +3948,10 @@ var dataStructureTyped = (() => {
         this.clear();
         return 0;
       }
-      const { bucketIndex, indexInBucket } = this._getBucketAndPosition(pos);
+      const {
+        bucketIndex,
+        indexInBucket
+      } = this._getBucketAndPosition(pos);
       this._bucketLast = bucketIndex;
       this._lastInBucket = indexInBucket;
       this._size = pos + 1;
@@ -3716,9 +3980,15 @@ var dataStructureTyped = (() => {
         this.pop();
       else {
         const length = this.size - 1;
-        let { bucketIndex: curBucket, indexInBucket: curPointer } = this._getBucketAndPosition(pos);
+        let {
+          bucketIndex: curBucket,
+          indexInBucket: curPointer
+        } = this._getBucketAndPosition(pos);
         for (let i = pos; i < length; ++i) {
-          const { bucketIndex: nextBucket, indexInBucket: nextPointer } = this._getBucketAndPosition(pos + 1);
+          const {
+            bucketIndex: nextBucket,
+            indexInBucket: nextPointer
+          } = this._getBucketAndPosition(pos + 1);
           this._buckets[curBucket][curPointer] = this._buckets[nextBucket][nextPointer];
           curBucket = nextBucket;
           curPointer = nextPointer;
@@ -3952,7 +4222,7 @@ var dataStructureTyped = (() => {
      * satisfy the given predicate function.
      */
     filter(predicate, thisArg) {
-      const newDeque = new _Deque([], { bucketSize: this._bucketSize });
+      const newDeque = new _Deque([], this._bucketSize);
       let index = 0;
       for (const el of this) {
         if (predicate.call(thisArg, el, index, this)) {
@@ -3980,7 +4250,7 @@ var dataStructureTyped = (() => {
      * @returns a new Deque object with the mapped values.
      */
     map(callback, thisArg) {
-      const newDeque = new _Deque([], { bucketSize: this._bucketSize });
+      const newDeque = new _Deque([], this._bucketSize);
       let index = 0;
       for (const el of this) {
         newDeque.push(callback.call(thisArg, el, index, this));
@@ -4116,29 +4386,29 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/heap/heap.ts
   var Heap = class _Heap extends IterableElementBase {
-    constructor(elements = [], options) {
+    constructor(elements, options) {
       super();
-      __publicField(this, "_comparator", (a, b) => {
+      __publicField(this, "options");
+      __publicField(this, "_elements", []);
+      const defaultComparator = (a, b) => {
         if (!(typeof a === "number" && typeof b === "number")) {
           throw new Error("The a, b params of compare function must be number");
         } else {
           return a - b;
         }
-      });
-      __publicField(this, "_elements", []);
+      };
       if (options) {
-        const { comparator } = options;
-        if (comparator)
-          this._comparator = comparator;
+        this.options = options;
+      } else {
+        this.options = {
+          comparator: defaultComparator
+        };
       }
       if (elements) {
         for (const el of elements) {
           this.add(el);
         }
       }
-    }
-    get comparator() {
-      return this._comparator;
     }
     get elements() {
       return this._elements;
@@ -4344,7 +4614,7 @@ var dataStructureTyped = (() => {
      * @returns A new Heap instance containing the same elements.
      */
     clone() {
-      const clonedHeap = new _Heap([], { comparator: this.comparator });
+      const clonedHeap = new _Heap([], this.options);
       clonedHeap._elements = [...this.elements];
       return clonedHeap;
     }
@@ -4470,7 +4740,7 @@ var dataStructureTyped = (() => {
       while (index > 0) {
         const parent = index - 1 >> 1;
         const parentItem = this.elements[parent];
-        if (this.comparator(parentItem, element) <= 0)
+        if (this.options.comparator(parentItem, element) <= 0)
           break;
         this.elements[index] = parentItem;
         index = parent;
@@ -4492,11 +4762,11 @@ var dataStructureTyped = (() => {
         let left = index << 1 | 1;
         const right = left + 1;
         let minItem = this.elements[left];
-        if (right < this.elements.length && this.comparator(minItem, this.elements[right]) > 0) {
+        if (right < this.elements.length && this.options.comparator(minItem, this.elements[right]) > 0) {
           left = right;
           minItem = this.elements[right];
         }
-        if (this.comparator(minItem, element) >= 0)
+        if (this.options.comparator(minItem, element) >= 0)
           break;
         this.elements[index] = minItem;
         index = left;
@@ -4855,7 +5125,7 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/heap/max-heap.ts
   var MaxHeap = class extends Heap {
-    constructor(elements = [], options = {
+    constructor(elements, options = {
       comparator: (a, b) => {
         if (!(typeof a === "number" && typeof b === "number")) {
           throw new Error("The a, b params of compare function must be number");
@@ -4870,7 +5140,7 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/heap/min-heap.ts
   var MinHeap = class extends Heap {
-    constructor(elements = [], options = {
+    constructor(elements, options = {
       comparator: (a, b) => {
         if (!(typeof a === "number" && typeof b === "number")) {
           throw new Error("The a, b params of compare function must be number");
@@ -4972,15 +5242,32 @@ var dataStructureTyped = (() => {
      */
     addVertex(keyOrVertex, value) {
       if (keyOrVertex instanceof AbstractVertex) {
-        return this._addVertex(keyOrVertex);
+        return this._addVertexOnly(keyOrVertex);
       } else {
         const newVertex = this.createVertex(keyOrVertex, value);
-        return this._addVertex(newVertex);
+        return this._addVertexOnly(newVertex);
       }
     }
     isVertexKey(potentialKey) {
       const potentialKeyType = typeof potentialKey;
       return potentialKeyType === "string" || potentialKeyType === "number";
+    }
+    /**
+     * Time Complexity: O(1) - Constant time for Map operations.
+     * Space Complexity: O(1) - Constant space, as it creates only a few variables.
+     */
+    /**
+     * Time Complexity: O(1) - Constant time for Map operations.
+     * Space Complexity: O(1) - Constant space, as it creates only a few variables.
+     *
+     * The `deleteVertex` function removes a vertex from a graph by its ID or by the vertex object itself.
+     * @param {VO | VertexKey} vertexOrKey - The parameter `vertexOrKey` can be either a vertex object (`VO`) or a vertex ID
+     * (`VertexKey`).
+     * @returns The method is returning a boolean value.
+     */
+    deleteVertex(vertexOrKey) {
+      const vertexKey = this._getVertexKey(vertexOrKey);
+      return this._vertexMap.delete(vertexKey);
     }
     /**
      * Time Complexity: O(K), where K is the number of vertexMap to be removed.
@@ -5028,7 +5315,7 @@ var dataStructureTyped = (() => {
      */
     addEdge(srcOrEdge, dest, weight, value) {
       if (srcOrEdge instanceof AbstractEdge) {
-        return this._addEdge(srcOrEdge);
+        return this._addEdgeOnly(srcOrEdge);
       } else {
         if (dest instanceof AbstractVertex || typeof dest === "string" || typeof dest === "number") {
           if (!(this.hasVertex(srcOrEdge) && this.hasVertex(dest)))
@@ -5038,7 +5325,7 @@ var dataStructureTyped = (() => {
           if (dest instanceof AbstractVertex)
             dest = dest.key;
           const newEdge = this.createEdge(srcOrEdge, dest, weight, value);
-          return this._addEdge(newEdge);
+          return this._addEdgeOnly(newEdge);
         } else {
           throw new Error("dest must be a Vertex or vertex key while srcOrEdge is an Edge");
         }
@@ -5845,6 +6132,13 @@ var dataStructureTyped = (() => {
       return this.tarjan(false, false, false, false).lowMap;
     }
     /**
+     * The function `getCycles` returns a map of cycles found using the Tarjan algorithm.
+     * @returns The function `getCycles()` is returning a `Map<number, VO[]>`.
+     */
+    getCycles() {
+      return this.tarjan(false, false, false, true).cycles;
+    }
+    /**
      * The function "getCutVertexes" returns an array of cut vertexes using the Tarjan algorithm.
      * @returns an array of VO objects, specifically the cut vertexes.
      */
@@ -5865,42 +6159,6 @@ var dataStructureTyped = (() => {
      */
     getBridges() {
       return this.tarjan(false, true, false, false).bridges;
-    }
-    /**
-     * O(V+E+C)
-     * O(V+C)
-     */
-    getCycles(isInclude2Cycle = false) {
-      const cycles = [];
-      const visited = /* @__PURE__ */ new Set();
-      const dfs = (vertex, currentPath, visited2) => {
-        if (visited2.has(vertex)) {
-          if ((!isInclude2Cycle && currentPath.length > 2 || isInclude2Cycle && currentPath.length >= 2) && currentPath[0] === vertex.key) {
-            cycles.push([...currentPath]);
-          }
-          return;
-        }
-        visited2.add(vertex);
-        currentPath.push(vertex.key);
-        for (const neighbor of this.getNeighbors(vertex)) {
-          neighbor && dfs(neighbor, currentPath, visited2);
-        }
-        visited2.delete(vertex);
-        currentPath.pop();
-      };
-      for (const vertex of this.vertexMap.values()) {
-        dfs(vertex, [], visited);
-      }
-      const uniqueCycles = /* @__PURE__ */ new Map();
-      for (const cycle of cycles) {
-        const sorted = [...cycle].sort().toString();
-        if (uniqueCycles.has(sorted))
-          continue;
-        else {
-          uniqueCycles.set(sorted, cycle);
-        }
-      }
-      return [...uniqueCycles].map((cycleString) => cycleString[1]);
     }
     /**
      * Time Complexity: O(n)
@@ -5964,7 +6222,7 @@ var dataStructureTyped = (() => {
         yield [vertex.key, vertex.value];
       }
     }
-    _addVertex(newVertex) {
+    _addVertexOnly(newVertex) {
       if (this.hasVertex(newVertex)) {
         return false;
       }
@@ -6187,10 +6445,6 @@ var dataStructureTyped = (() => {
         vertexKey = this._getVertexKey(vertexOrKey);
       }
       if (vertex) {
-        const neighbors = this.getNeighbors(vertex);
-        for (const neighbor of neighbors) {
-          this._inEdgeMap.delete(neighbor);
-        }
         this._outEdgeMap.delete(vertex);
         this._inEdgeMap.delete(vertex);
       }
@@ -6505,13 +6759,13 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(1)
      * Space Complexity: O(1)
      *
-     * The function `_addEdge` adds an edge to a graph if the source and destination vertexMap exist.
+     * The function `_addEdgeOnly` adds an edge to a graph if the source and destination vertexMap exist.
      * @param {EO} edge - The parameter `edge` is of type `EO`, which represents an edge in a graph. It is the edge that
      * needs to be added to the graph.
      * @returns a boolean value. It returns true if the edge was successfully added to the graph, and false if either the
      * source or destination vertex does not exist in the graph.
      */
-    _addEdge(edge) {
+    _addEdgeOnly(edge) {
       if (!(this.hasVertex(edge.src) && this.hasVertex(edge.dest))) {
         return false;
       }
@@ -6865,7 +7119,7 @@ var dataStructureTyped = (() => {
      * @param {EO} edge - The parameter "edge" is of type EO, which represents an edge in a graph.
      * @returns a boolean value.
      */
-    _addEdge(edge) {
+    _addEdgeOnly(edge) {
       for (const end of edge.vertexMap) {
         const endVertex = this._getVertex(end);
         if (endVertex === void 0)
@@ -6983,8 +7237,8 @@ var dataStructureTyped = (() => {
 
   // src/types/common.ts
   var BSTVariant = /* @__PURE__ */ ((BSTVariant2) => {
-    BSTVariant2["STANDARD"] = "STANDARD";
-    BSTVariant2["INVERSE"] = "INVERSE";
+    BSTVariant2["MIN"] = "MIN";
+    BSTVariant2["MAX"] = "MAX";
     return BSTVariant2;
   })(BSTVariant || {});
   var CP = /* @__PURE__ */ ((CP2) => {
@@ -7057,31 +7311,33 @@ var dataStructureTyped = (() => {
   };
   var BinaryTree = class _BinaryTree extends IterableEntryBase {
     /**
-     * The constructor function initializes a binary tree object with optional keysOrNodesOrEntries and options.
-     * @param [keysOrNodesOrEntries] - An optional iterable of KeyOrNodeOrEntry objects. These objects represent the
-     * nodes to be added to the binary tree.
+     * The constructor function initializes a binary tree object with optional elements and options.
+     * @param [elements] - An optional iterable of BTNExemplar objects. These objects represent the
+     * elements to be added to the binary tree.
      * @param [options] - The `options` parameter is an optional object that can contain additional
      * configuration options for the binary tree. In this case, it is of type
      * `Partial<BinaryTreeOptions>`, which means that not all properties of `BinaryTreeOptions` are
      * required.
      */
-    constructor(keysOrNodesOrEntries = [], options) {
+    constructor(elements, options) {
       super();
       __publicField(this, "iterationType", "ITERATIVE" /* ITERATIVE */);
       __publicField(this, "_extractor", (key) => Number(key));
       __publicField(this, "_root");
       __publicField(this, "_size");
-      __publicField(this, "_defaultOneParamCallback", (node) => node ? node.key : void 0);
+      __publicField(this, "_defaultOneParamCallback", (node) => node.key);
       if (options) {
         const { iterationType, extractor } = options;
-        if (iterationType)
+        if (iterationType) {
           this.iterationType = iterationType;
-        if (extractor)
+        }
+        if (extractor) {
           this._extractor = extractor;
+        }
       }
       this._size = 0;
-      if (keysOrNodesOrEntries)
-        this.addMany(keysOrNodesOrEntries);
+      if (elements)
+        this.addMany(elements);
     }
     get extractor() {
       return this._extractor;
@@ -7112,21 +7368,29 @@ var dataStructureTyped = (() => {
       return new _BinaryTree([], __spreadValues({ iterationType: this.iterationType }, options));
     }
     /**
-     * The function `exemplarToNode` converts an keyOrNodeOrEntry object into a node object.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`.
+     * The function "isNode" checks if an exemplar is an instance of the BinaryTreeNode class.
+     * @param exemplar - The `exemplar` parameter is a variable of type `BTNExemplar<K, V,N>`.
+     * @returns a boolean value indicating whether the exemplar is an instance of the class N.
+     */
+    isNode(exemplar) {
+      return exemplar instanceof BinaryTreeNode;
+    }
+    /**
+     * The function `exemplarToNode` converts an exemplar object into a node object.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`.
      * @param {V} [value] - The `value` parameter is an optional value that can be passed to the
-     * `exemplarToNode` function. It represents the value associated with the keyOrNodeOrEntry node. If no value
+     * `exemplarToNode` function. It represents the value associated with the exemplar node. If no value
      * is provided, it will be `undefined`.
      * @returns a value of type N (node), or null, or undefined.
      */
-    exemplarToNode(keyOrNodeOrEntry, value) {
-      if (keyOrNodeOrEntry === void 0)
+    exemplarToNode(exemplar, value) {
+      if (exemplar === void 0)
         return;
       let node;
-      if (keyOrNodeOrEntry === null) {
+      if (exemplar === null) {
         node = null;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        const [key, value2] = keyOrNodeOrEntry;
+      } else if (this.isEntry(exemplar)) {
+        const [key, value2] = exemplar;
         if (key === void 0) {
           return;
         } else if (key === null) {
@@ -7134,104 +7398,23 @@ var dataStructureTyped = (() => {
         } else {
           node = this.createNode(key, value2);
         }
-      } else if (this.isNode(keyOrNodeOrEntry)) {
-        node = keyOrNodeOrEntry;
-      } else if (this.isNotNodeInstance(keyOrNodeOrEntry)) {
-        node = this.createNode(keyOrNodeOrEntry, value);
+      } else if (this.isNode(exemplar)) {
+        node = exemplar;
+      } else if (this.isNotNodeInstance(exemplar)) {
+        node = this.createNode(exemplar, value);
       } else {
         return;
       }
       return node;
     }
     /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(log n)
-     */
-    /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(log n)
-     *
-     * The function `ensureNode` returns the node corresponding to the given key if it is a valid node
-     * key, otherwise it returns the key itself.
-     * @param {K | N | null | undefined} keyOrNodeOrEntry - The `key` parameter can be of type `K`, `N`,
-     * `null`, or `undefined`. It represents a key used to identify a node in a binary tree.
-     * @param iterationType - The `iterationType` parameter is an optional parameter that specifies the
-     * type of iteration to be used when searching for a node by key. It has a default value of
-     * `IterationType.ITERATIVE`.
-     * @returns either the node corresponding to the given key if it is a valid node key, or the key
-     * itself if it is not a valid node key.
-     */
-    ensureNode(keyOrNodeOrEntry, iterationType = "ITERATIVE" /* ITERATIVE */) {
-      let res;
-      if (this.isRealNode(keyOrNodeOrEntry)) {
-        res = keyOrNodeOrEntry;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        if (keyOrNodeOrEntry[0] === null)
-          res = null;
-        else if (keyOrNodeOrEntry[0] !== void 0)
-          res = this.getNodeByKey(keyOrNodeOrEntry[0], iterationType);
-      } else {
-        if (keyOrNodeOrEntry === null)
-          res = null;
-        else if (keyOrNodeOrEntry !== void 0)
-          res = this.getNodeByKey(keyOrNodeOrEntry, iterationType);
-      }
-      return res;
-    }
-    /**
-     * The function "isNode" checks if an keyOrNodeOrEntry is an instance of the BinaryTreeNode class.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is a variable of type `KeyOrNodeOrEntry<K, V,N>`.
-     * @returns a boolean value indicating whether the keyOrNodeOrEntry is an instance of the class N.
-     */
-    isNode(keyOrNodeOrEntry) {
-      return keyOrNodeOrEntry instanceof BinaryTreeNode;
-    }
-    /**
      * The function checks if a given value is an entry in a binary tree node.
-     * @param keyOrNodeOrEntry - KeyOrNodeOrEntry<K, V,N> - A generic type representing a node in a binary tree. It has
+     * @param kne - BTNExemplar<K, V,N> - A generic type representing a node in a binary tree. It has
      * two type parameters V and N, representing the value and node type respectively.
      * @returns a boolean value.
      */
-    isEntry(keyOrNodeOrEntry) {
-      return Array.isArray(keyOrNodeOrEntry) && keyOrNodeOrEntry.length === 2;
-    }
-    /**
-     * Time complexity: O(n)
-     * Space complexity: O(log n)
-     */
-    /**
-     * The function checks if a given node is a real node by verifying if it is an instance of
-     * BinaryTreeNode and its key is not NaN.
-     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
-     * @returns a boolean value.
-     */
-    isRealNode(node) {
-      return node instanceof BinaryTreeNode && String(node.key) !== "NaN";
-    }
-    /**
-     * The function checks if a given node is a BinaryTreeNode instance and has a key value of NaN.
-     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
-     * @returns a boolean value.
-     */
-    isNIL(node) {
-      return node instanceof BinaryTreeNode && String(node.key) === "NaN";
-    }
-    /**
-     * The function checks if a given node is a real node or null.
-     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
-     * @returns a boolean value.
-     */
-    isNodeOrNull(node) {
-      return this.isRealNode(node) || node === null;
-    }
-    /**
-     * The function "isNotNodeInstance" checks if a potential key is a K.
-     * @param {any} potentialKey - The potentialKey parameter is of type any, which means it can be any
-     * data type.
-     * @returns a boolean value indicating whether the potentialKey is of type number or not.
-     */
-    isNotNodeInstance(potentialKey) {
-      return !(potentialKey instanceof BinaryTreeNode);
+    isEntry(kne) {
+      return Array.isArray(kne) && kne.length === 2;
     }
     /**
      * Time Complexity O(log n) - O(n)
@@ -7250,11 +7433,11 @@ var dataStructureTyped = (() => {
     add(keyOrNodeOrEntry, value) {
       const newNode = this.exemplarToNode(keyOrNodeOrEntry, value);
       if (newNode === void 0)
-        return false;
+        return;
       if (!this.root) {
         this._root = newNode;
         this._size = 1;
-        return true;
+        return newNode;
       }
       const queue = new Queue([this.root]);
       let potentialParent;
@@ -7264,7 +7447,7 @@ var dataStructureTyped = (() => {
           continue;
         if (newNode !== null && cur.key === newNode.key) {
           this._replaceNode(cur, newNode);
-          return true;
+          return newNode;
         }
         if (potentialParent === void 0 && (cur.left === void 0 || cur.right === void 0)) {
           potentialParent = cur;
@@ -7283,9 +7466,9 @@ var dataStructureTyped = (() => {
           potentialParent.right = newNode;
         }
         this._size++;
-        return true;
+        return newNode;
       }
-      return false;
+      return void 0;
     }
     /**
      * Time Complexity: O(k log n) - O(k * n)
@@ -7296,19 +7479,19 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(k log n) - O(k * n)
      * Space Complexity: O(1)
      *
-     * The `addMany` function takes in a collection of keysOrNodesOrEntries and an optional collection of values, and
+     * The `addMany` function takes in a collection of nodes and an optional collection of values, and
      * adds each node with its corresponding value to the data structure.
-     * @param keysOrNodesOrEntries - An iterable collection of KeyOrNodeOrEntry objects.
+     * @param nodes - An iterable collection of BTNExemplar objects.
      * @param [values] - An optional iterable of values that will be assigned to each node being added.
      * @returns The function `addMany` returns an array of `N`, `null`, or `undefined` values.
      */
-    addMany(keysOrNodesOrEntries, values) {
+    addMany(nodes, values) {
       const inserted = [];
       let valuesIterator;
       if (values) {
         valuesIterator = values[Symbol.iterator]();
       }
-      for (const keyOrNodeOrEntry of keysOrNodesOrEntries) {
+      for (const kne of nodes) {
         let value = void 0;
         if (valuesIterator) {
           const valueResult = valuesIterator.next();
@@ -7316,30 +7499,17 @@ var dataStructureTyped = (() => {
             value = valueResult.value;
           }
         }
-        inserted.push(this.add(keyOrNodeOrEntry, value));
+        inserted.push(this.add(kne, value));
       }
       return inserted;
     }
     /**
-     * Time Complexity: O(k * n)
+     * Time Complexity: O(k * n)  "n" is the number of nodes in the tree, and "k" is the number of keys to be inserted.
      * Space Complexity: O(1)
-     * "n" is the number of nodes in the tree, and "k" is the number of keys to be inserted.
      */
-    /**
-     * Time Complexity: O(k * n)
-     * Space Complexity: O(1)
-     *
-     * The `refill` function clears the current data and adds new key-value pairs to the data structure.
-     * @param keysOrNodesOrEntries - An iterable containing keys, nodes, or entries. These can be of type
-     * KeyOrNodeOrEntry<K, V, N>.
-     * @param [values] - The `values` parameter is an optional iterable that contains the values to be
-     * associated with the keys or nodes or entries in the `keysOrNodesOrEntries` parameter. If provided,
-     * the values will be associated with the corresponding keys or nodes or entries in the
-     * `keysOrNodesOrEntries` iterable
-     */
-    refill(keysOrNodesOrEntries, values) {
+    refill(nodesOrKeysOrEntries, values) {
       this.clear();
-      this.addMany(keysOrNodesOrEntries, values);
+      this.addMany(nodesOrKeysOrEntries, values);
     }
     /**
      * Time Complexity: O(n)
@@ -7409,24 +7579,24 @@ var dataStructureTyped = (() => {
      * Space Complexity: O(1)
      *
      * The function calculates the depth of a given node in a binary tree.
-     * @param {K | N | null | undefined} dist - The `dist` parameter represents the node in
+     * @param {K | N | null | undefined} distNode - The `distNode` parameter represents the node in
      * the binary tree whose depth we want to find. It can be of type `K`, `N`, `null`, or
      * `undefined`.
      * @param {K | N | null | undefined} beginRoot - The `beginRoot` parameter is the starting node
      * from which we want to calculate the depth. It can be either a `K` (binary tree node key) or
      * `N` (binary tree node) or `null` or `undefined`. If no value is provided for `beginRoot
-     * @returns the depth of the `dist` relative to the `beginRoot`.
+     * @returns the depth of the `distNode` relative to the `beginRoot`.
      */
-    getDepth(dist, beginRoot = this.root) {
-      dist = this.ensureNode(dist);
+    getDepth(distNode, beginRoot = this.root) {
+      distNode = this.ensureNode(distNode);
       beginRoot = this.ensureNode(beginRoot);
       let depth = 0;
-      while (dist == null ? void 0 : dist.parent) {
-        if (dist === beginRoot) {
+      while (distNode == null ? void 0 : distNode.parent) {
+        if (distNode === beginRoot) {
           return depth;
         }
         depth++;
-        dist = dist.parent;
+        distNode = distNode.parent;
       }
       return depth;
     }
@@ -7618,7 +7788,6 @@ var dataStructureTyped = (() => {
     }
     /**
      * Time Complexity: O(n)
-     * Space Complexity: O(log n).
      *
      * The function checks if a Binary Tree Node with a specific identifier exists in the tree.
      * @param {ReturnType<C> | null | undefined} identifier - The `identifier` parameter is the value
@@ -7718,6 +7887,24 @@ var dataStructureTyped = (() => {
     /**
      * Time Complexity: O(n)
      * Space Complexity: O(log n)
+     */
+    /**
+     * The function `ensureNode` returns the node corresponding to the given key if it is a valid node
+     * key, otherwise it returns the key itself.
+     * @param {K | N | null | undefined} key - The `key` parameter can be of type `K`, `N`,
+     * `null`, or `undefined`. It represents a key used to identify a node in a binary tree.
+     * @param iterationType - The `iterationType` parameter is an optional parameter that specifies the
+     * type of iteration to be used when searching for a node by key. It has a default value of
+     * `IterationType.ITERATIVE`.
+     * @returns either the node corresponding to the given key if it is a valid node key, or the key
+     * itself if it is not a valid node key.
+     */
+    ensureNode(key, iterationType = "ITERATIVE" /* ITERATIVE */) {
+      return this.isNotNodeInstance(key) ? this.getNodeByKey(key, iterationType) : key;
+    }
+    /**
+     * Time Complexity: O(n)
+     * Space Complexity: O(log n)
      *
      * The function `get` retrieves the value of a node in a binary tree based on the provided identifier
      * and callback function.
@@ -7744,13 +7931,10 @@ var dataStructureTyped = (() => {
       return (_b = (_a = this.getNode(identifier, callback, beginRoot, iterationType)) == null ? void 0 : _a.value) != null ? _b : void 0;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(n)
+     * Space Complexity: O(log n)
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     *
      * Clear the binary tree, removing all nodes.
      */
     clear() {
@@ -7758,13 +7942,6 @@ var dataStructureTyped = (() => {
       this._size = 0;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     */
-    /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     *
      * Check if the binary tree is empty.
      * @returns {boolean} - True if the binary tree is empty, false otherwise.
      */
@@ -7799,7 +7976,7 @@ var dataStructureTyped = (() => {
     }
     /**
      * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Space Complexity: O(log n)
      */
     /**
      * Time Complexity: O(log n)
@@ -7890,7 +8067,7 @@ var dataStructureTyped = (() => {
      * possible values:
      * @returns a boolean value.
      */
-    isBST(beginRoot = this.root, iterationType = this.iterationType) {
+    isSubtreeBST(beginRoot, iterationType = this.iterationType) {
       beginRoot = this.ensureNode(beginRoot);
       if (!beginRoot)
         return true;
@@ -7903,31 +8080,44 @@ var dataStructureTyped = (() => {
             return false;
           return dfs(cur.left, min, numKey) && dfs(cur.right, numKey, max);
         };
-        const isStandardBST = dfs(beginRoot, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-        const isInverseBST = dfs(beginRoot, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER);
-        return isStandardBST || isInverseBST;
+        return dfs(beginRoot, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
       } else {
-        const checkBST = (checkMax = false) => {
-          const stack = [];
-          let prev = checkMax ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER;
-          let curr = beginRoot;
-          while (curr || stack.length > 0) {
-            while (curr) {
-              stack.push(curr);
-              curr = curr.left;
-            }
-            curr = stack.pop();
-            const numKey = this.extractor(curr.key);
-            if (!curr || !checkMax && prev >= numKey || checkMax && prev <= numKey)
-              return false;
-            prev = numKey;
-            curr = curr.right;
+        const stack = [];
+        let prev = Number.MIN_SAFE_INTEGER, curr = beginRoot;
+        while (curr || stack.length > 0) {
+          while (curr) {
+            stack.push(curr);
+            curr = curr.left;
           }
-          return true;
-        };
-        const isStandardBST = checkBST(false), isInverseBST = checkBST(true);
-        return isStandardBST || isInverseBST;
+          curr = stack.pop();
+          const numKey = this.extractor(curr.key);
+          if (!curr || prev >= numKey)
+            return false;
+          prev = numKey;
+          curr = curr.right;
+        }
+        return true;
       }
+    }
+    /**
+     * Time Complexity: O(n)
+     * Space Complexity: O(1)
+     */
+    /**
+     * Time Complexity: O(n)
+     * Space Complexity: O(1)
+     *
+     * The function checks if a binary tree is a binary search tree.
+     * @param iterationType - The parameter "iterationType" is used to specify the type of iteration to
+     * be used when checking if the binary tree is a binary search tree (BST). It is an optional
+     * parameter with a default value of "this.iterationType". The value of "this.iterationType" is
+     * expected to be
+     * @returns a boolean value.
+     */
+    isBST(iterationType = this.iterationType) {
+      if (this.root === null)
+        return true;
+      return this.isSubtreeBST(this.root, iterationType);
     }
     /**
      * Time complexity: O(n)
@@ -7948,7 +8138,7 @@ var dataStructureTyped = (() => {
      * whether to include null values in the traversal. If `includeNull` is set to `true`, the
      * traversal will include null values, otherwise it will skip them.
      * @returns The function `subTreeTraverse` returns an array of values that are the result of invoking
-     * the `callback` function on each node in the subtree. The type of the array nodes is determined
+     * the `callback` function on each node in the subtree. The type of the array elements is determined
      * by the return type of the `callback` function.
      */
     subTreeTraverse(callback = this._defaultOneParamCallback, beginRoot = this.root, iterationType = this.iterationType, includeNull = false) {
@@ -7987,6 +8177,44 @@ var dataStructureTyped = (() => {
         }
       }
       return ans;
+    }
+    /**
+     * Time complexity: O(n)
+     * Space complexity: O(log n)
+     */
+    /**
+     * The function checks if a given node is a real node by verifying if it is an instance of
+     * BinaryTreeNode and its key is not NaN.
+     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
+     * @returns a boolean value.
+     */
+    isRealNode(node) {
+      return node instanceof BinaryTreeNode && String(node.key) !== "NaN";
+    }
+    /**
+     * The function checks if a given node is a BinaryTreeNode instance and has a key value of NaN.
+     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
+     * @returns a boolean value.
+     */
+    isNIL(node) {
+      return node instanceof BinaryTreeNode && String(node.key) === "NaN";
+    }
+    /**
+     * The function checks if a given node is a real node or null.
+     * @param {any} node - The parameter `node` is of type `any`, which means it can be any data type.
+     * @returns a boolean value.
+     */
+    isNodeOrNull(node) {
+      return this.isRealNode(node) || node === null;
+    }
+    /**
+     * The function "isNotNodeInstance" checks if a potential key is a K.
+     * @param {any} potentialKey - The potentialKey parameter is of type any, which means it can be any
+     * data type.
+     * @returns a boolean value indicating whether the potentialKey is of type number or not.
+     */
+    isNotNodeInstance(potentialKey) {
+      return !(potentialKey instanceof BinaryTreeNode);
     }
     /**
      * Time complexity: O(n)
@@ -8149,9 +8377,9 @@ var dataStructureTyped = (() => {
             if (current && this.isNodeOrNull(current.right))
               queue.push(current.right);
           } else {
-            if (this.isRealNode(current.left))
+            if (current.left)
               queue.push(current.left);
-            if (this.isRealNode(current.right))
+            if (current.right)
               queue.push(current.right);
           }
           traverse(level + 1);
@@ -8170,9 +8398,9 @@ var dataStructureTyped = (() => {
               if (current && this.isNodeOrNull(current.right))
                 queue.push(current.right);
             } else {
-              if (this.isRealNode(current.left))
+              if (current.left)
                 queue.push(current.left);
-              if (this.isRealNode(current.right))
+              if (current.right)
                 queue.push(current.right);
             }
           }
@@ -8295,12 +8523,7 @@ var dataStructureTyped = (() => {
     }
     /**
      * Time complexity: O(n)
-     * Space complexity: O(n)
-     */
-    /**
-     * Time complexity: O(n)
-     * Space complexity: O(n)
-     *
+     * Space complexity: O(1)
      * The `morris` function performs a depth-first traversal on a binary tree using the Morris traversal
      * algorithm.
      * @param {C} callback - The `callback` parameter is a function that will be called for each node in
@@ -8313,7 +8536,7 @@ var dataStructureTyped = (() => {
      * for the traversal. It can be specified as a key, a node object, or `null`/`undefined` to indicate
      * the root of the tree. If no value is provided, the default value is the root of the tree.
      * @returns The function `morris` returns an array of values that are the result of invoking the
-     * `callback` function on each node in the binary tree. The type of the array nodes is determined
+     * `callback` function on each node in the binary tree. The type of the array elements is determined
      * by the return type of the `callback` function.
      */
     morris(callback = this._defaultOneParamCallback, pattern = "in", beginRoot = this.root) {
@@ -8422,8 +8645,8 @@ var dataStructureTyped = (() => {
      * Time Complexity: O(n)
      * Space Complexity: O(n)
      *
-     * The `filter` function creates a new tree by iterating over the nodes of the current tree and
-     * adding only the nodes that satisfy the given predicate function.
+     * The `filter` function creates a new tree by iterating over the elements of the current tree and
+     * adding only the elements that satisfy the given predicate function.
      * @param predicate - The `predicate` parameter is a function that takes three arguments: `value`,
      * `key`, and `index`. It should return a boolean value indicating whether the pair should be
      * included in the filtered tree or not.
@@ -8480,13 +8703,6 @@ var dataStructureTyped = (() => {
     // // }
     //
     /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(n)
-     */
-    /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(n)
-     *
      * The `print` function is used to display a binary tree structure in a visually appealing way.
      * @param {K | N | null | undefined} [beginRoot=this.root] - The `root` parameter is of type `K | N | null |
      * undefined`. It represents the root node of a binary tree. The root node can have one of the
@@ -8553,12 +8769,7 @@ var dataStructureTyped = (() => {
         return emptyDisplayLayout;
       } else if (node !== null && node !== void 0) {
         const key = node.key, line = isNaN(this.extractor(key)) ? "S" : this.extractor(key).toString(), width = line.length;
-        return _buildNodeDisplay(
-          line,
-          width,
-          this._displayAux(node.left, options),
-          this._displayAux(node.right, options)
-        );
+        return _buildNodeDisplay(line, width, this._displayAux(node.left, options), this._displayAux(node.right, options));
       } else {
         const line = node === void 0 ? "U" : "N", width = line.length;
         return _buildNodeDisplay(line, width, [[""], 1, 0, 0], [[""], 1, 0, 0]);
@@ -8574,12 +8785,7 @@ var dataStructureTyped = (() => {
           const rightLine = i < rightHeight ? rightLines[i] : " ".repeat(rightWidth);
           mergedLines.push(leftLine + " ".repeat(width) + rightLine);
         }
-        return [
-          mergedLines,
-          leftWidth + width + rightWidth,
-          Math.max(leftHeight, rightHeight) + 2,
-          leftWidth + Math.floor(width / 2)
-        ];
+        return [mergedLines, leftWidth + width + rightWidth, Math.max(leftHeight, rightHeight) + 2, leftWidth + Math.floor(width / 2)];
       }
     }
     /**
@@ -8627,6 +8833,40 @@ var dataStructureTyped = (() => {
         this._root = newNode;
       }
       return newNode;
+    }
+    /**
+     * The function `_addTo` adds a new node to a binary tree if there is an available position.
+     * @param {N | null | undefined} newNode - The `newNode` parameter represents the node that you want to add to
+     * the binary tree. It can be either a node object or `null`.
+     * @param {N} parent - The `parent` parameter represents the parent node to which the new node will
+     * be added as a child.
+     * @returns either the left or right child node of the parent node, depending on which child is
+     * available for adding the new node. If a new node is added, the function also updates the size of
+     * the binary tree. If neither the left nor right child is available, the function returns undefined.
+     * If the parent node is null, the function also returns undefined.
+     */
+    _addTo(newNode, parent) {
+      if (this.isNotNodeInstance(parent))
+        parent = this.getNode(parent);
+      if (parent) {
+        if (parent.left === void 0) {
+          parent.left = newNode;
+          if (newNode) {
+            this._size = this.size + 1;
+          }
+          return parent.left;
+        } else if (parent.right === void 0) {
+          parent.right = newNode;
+          if (newNode) {
+            this._size = this.size + 1;
+          }
+          return parent.right;
+        } else {
+          return;
+        }
+      } else {
+        return;
+      }
     }
     /**
      * The function sets the root property of an object to a given value, and if the value is not null,
@@ -8689,24 +8929,25 @@ var dataStructureTyped = (() => {
   var BST = class _BST extends BinaryTree {
     /**
      * This is the constructor function for a binary search tree class in TypeScript, which initializes
-     * the tree with optional keysOrNodesOrEntries and options.
-     * @param [keysOrNodesOrEntries] - An optional iterable of KeyOrNodeOrEntry objects that will be added to the
+     * the tree with optional elements and options.
+     * @param [elements] - An optional iterable of BTNExemplar objects that will be added to the
      * binary search tree.
      * @param [options] - The `options` parameter is an optional object that can contain additional
      * configuration options for the binary search tree. It can have the following properties:
      */
-    constructor(keysOrNodesOrEntries = [], options) {
+    constructor(elements, options) {
       super([], options);
       __publicField(this, "_root");
-      __publicField(this, "_variant", "STANDARD" /* STANDARD */);
+      __publicField(this, "_variant", "MIN" /* MIN */);
       if (options) {
         const { variant } = options;
-        if (variant)
+        if (variant) {
           this._variant = variant;
+        }
       }
       this._root = void 0;
-      if (keysOrNodesOrEntries)
-        this.addMany(keysOrNodesOrEntries);
+      if (elements)
+        this.addMany(elements);
     }
     get root() {
       return this._root;
@@ -8739,88 +8980,48 @@ var dataStructureTyped = (() => {
       }, options));
     }
     /**
-     * The function `exemplarToNode` takes an keyOrNodeOrEntry and returns a node if the keyOrNodeOrEntry is valid,
+     * The function checks if an exemplar is an instance of BSTNode.
+     * @param exemplar - The `exemplar` parameter is a variable of type `BTNExemplar<K, V, N>`.
+     * @returns a boolean value indicating whether the exemplar is an instance of the BSTNode class.
+     */
+    isNode(exemplar) {
+      return exemplar instanceof BSTNode;
+    }
+    /**
+     * The function `exemplarToNode` takes an exemplar and returns a node if the exemplar is valid,
      * otherwise it returns undefined.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`, where:
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`, where:
      * @param {V} [value] - The `value` parameter is an optional value that can be passed to the
-     * `exemplarToNode` function. It represents the value associated with the keyOrNodeOrEntry node.
+     * `exemplarToNode` function. It represents the value associated with the exemplar node.
      * @returns a node of type N or undefined.
      */
-    exemplarToNode(keyOrNodeOrEntry, value) {
+    exemplarToNode(exemplar, value) {
       let node;
-      if (keyOrNodeOrEntry === null || keyOrNodeOrEntry === void 0) {
+      if (exemplar === null || exemplar === void 0) {
         return;
-      } else if (this.isNode(keyOrNodeOrEntry)) {
-        node = keyOrNodeOrEntry;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        const [key, value2] = keyOrNodeOrEntry;
+      } else if (this.isNode(exemplar)) {
+        node = exemplar;
+      } else if (this.isEntry(exemplar)) {
+        const [key, value2] = exemplar;
         if (key === void 0 || key === null) {
           return;
         } else {
           node = this.createNode(key, value2);
         }
-      } else if (this.isNotNodeInstance(keyOrNodeOrEntry)) {
-        node = this.createNode(keyOrNodeOrEntry, value);
+      } else if (this.isNotNodeInstance(exemplar)) {
+        node = this.createNode(exemplar, value);
       } else {
         return;
       }
       return node;
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
-     * Average case for a balanced tree. Space for the recursive call stack in the worst case.
+     * Time Complexity: O(log n) - Average case for a balanced tree. In the worst case (unbalanced tree), it can be O(n).
+     * Space Complexity: O(1) - Constant space is used.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
-     *
-     * The function `ensureNode` returns the node corresponding to the given key if it is a node key,
-     * otherwise it returns the key itself.
-     * @param {K | N | undefined} keyOrNodeOrEntry - The `key` parameter can be of type `K`, `N`, or
-     * `undefined`.
-     * @param iterationType - The `iterationType` parameter is an optional parameter that specifies the
-     * type of iteration to be performed. It has a default value of `IterationType.ITERATIVE`.
-     * @returns either a node object (N) or undefined.
-     */
-    ensureNode(keyOrNodeOrEntry, iterationType = "ITERATIVE" /* ITERATIVE */) {
-      let res;
-      if (this.isRealNode(keyOrNodeOrEntry)) {
-        res = keyOrNodeOrEntry;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        if (keyOrNodeOrEntry[0])
-          res = this.getNodeByKey(keyOrNodeOrEntry[0], iterationType);
-      } else {
-        if (keyOrNodeOrEntry)
-          res = this.getNodeByKey(keyOrNodeOrEntry, iterationType);
-      }
-      return res;
-    }
-    /**
-     * The function "isNotNodeInstance" checks if a potential key is a K.
-     * @param {any} potentialKey - The potentialKey parameter is of type any, which means it can be any
-     * data type.
-     * @returns a boolean value indicating whether the potentialKey is of type number or not.
-     */
-    isNotNodeInstance(potentialKey) {
-      return !(potentialKey instanceof BSTNode);
-    }
-    /**
-     * The function checks if an keyOrNodeOrEntry is an instance of BSTNode.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is a variable of type `KeyOrNodeOrEntry<K, V, N>`.
-     * @returns a boolean value indicating whether the keyOrNodeOrEntry is an instance of the BSTNode class.
-     */
-    isNode(keyOrNodeOrEntry) {
-      return keyOrNodeOrEntry instanceof BSTNode;
-    }
-    /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
-     *  - Average case for a balanced tree. In the worst case (unbalanced tree), it can be O(n).
-     */
-    /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - Average case for a balanced tree. In the worst case (unbalanced tree), it can be O(n).
+     * Space Complexity: O(1) - Constant space is used.
      *
      * The `add` function adds a new node to a binary tree, updating the value if the key already exists
      * or inserting a new node if the key is unique.
@@ -8833,23 +9034,23 @@ var dataStructureTyped = (() => {
     add(keyOrNodeOrEntry, value) {
       const newNode = this.exemplarToNode(keyOrNodeOrEntry, value);
       if (newNode === void 0)
-        return false;
+        return;
       if (this.root === void 0) {
         this._setRoot(newNode);
         this._size++;
-        return true;
+        return this.root;
       }
       let current = this.root;
       while (current !== void 0) {
         if (this._compare(current.key, newNode.key) === "eq" /* eq */) {
           this._replaceNode(current, newNode);
-          return true;
+          return newNode;
         } else if (this._compare(current.key, newNode.key) === "gt" /* gt */) {
           if (current.left === void 0) {
             current.left = newNode;
             newNode.parent = current;
             this._size++;
-            return true;
+            return newNode;
           }
           current = current.left;
         } else {
@@ -8857,21 +9058,20 @@ var dataStructureTyped = (() => {
             current.right = newNode;
             newNode.parent = current;
             this._size++;
-            return true;
+            return newNode;
           }
           current = current.right;
         }
       }
-      return false;
+      return void 0;
     }
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(k)
-     * Adding each element individually in a balanced tree. Additional space is required for the sorted array.
+     * Time Complexity: O(k log n) - Adding each element individually in a balanced tree.
+     * Space Complexity: O(k) - Additional space is required for the sorted array.
      */
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(k)
+     * Time Complexity: O(k log n) - Adding each element individually in a balanced tree.
+     * Space Complexity: O(k) - Additional space is required for the sorted array.
      *
      * The `addMany` function in TypeScript adds multiple keys or nodes to a binary tree, optionally
      * balancing the tree after each addition.
@@ -8882,7 +9082,7 @@ var dataStructureTyped = (() => {
      * order. If not provided, undefined will be assigned as the value for each key or node.
      * @param [isBalanceAdd=true] - A boolean flag indicating whether the add operation should be
      * balanced or not. If set to true, the add operation will be balanced using a binary search tree
-     * algorithm. If set to false, the add operation will not be balanced and the nodes will be added
+     * algorithm. If set to false, the add operation will not be balanced and the elements will be added
      * in the order they appear in the input.
      * @param iterationType - The `iterationType` parameter is an optional parameter that specifies the
      * type of iteration to use when adding multiple keys or nodes. It has a default value of
@@ -8963,19 +9163,20 @@ var dataStructureTyped = (() => {
       return inserted;
     }
     /**
-     * Time Complexity: O(n log n)
-     * Space Complexity: O(n)
-     * Adding each element individually in a balanced tree. Additional space is required for the sorted array.
+     * Time Complexity: O(n log n) - Adding each element individually in a balanced tree.
+     * Space Complexity: O(n) - Additional space is required for the sorted array.
      */
     /**
-     * Time Complexity: O(n log n)
-     * Space Complexity: O(n)
+     * Time Complexity: O(log n) - Average case for a balanced tree.
+     * Space Complexity: O(1) - Constant space is used.
      *
      * The `lastKey` function returns the key of the rightmost node in a binary tree, or the key of the
      * leftmost node if the comparison result is greater than.
      * @param {K | N | undefined} beginRoot - The `beginRoot` parameter is optional and can be of
      * type `K`, `N`, or `undefined`. It represents the starting point for finding the last key in
      * the binary tree. If not provided, it defaults to the root of the binary tree (`this.root`).
+     * @param iterationType - The `iterationType` parameter is used to specify the type of iteration to
+     * be performed. It can have one of the following values:
      * @returns the key of the rightmost node in the binary tree if the comparison result is less than,
      * the key of the leftmost node if the comparison result is greater than, and the key of the
      * rightmost node otherwise. If no node is found, it returns 0.
@@ -8984,7 +9185,7 @@ var dataStructureTyped = (() => {
       let current = this.ensureNode(beginRoot);
       if (!current)
         return void 0;
-      if (this._variant === "STANDARD" /* STANDARD */) {
+      if (this._variant === "MIN" /* MIN */) {
         while (current.right !== void 0) {
           current = current.right;
         }
@@ -8996,12 +9197,12 @@ var dataStructureTyped = (() => {
       return current.key;
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - Average case for a balanced tree.
+     * Space Complexity: O(1) - Constant space is used.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - Average case for a balanced tree.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
      *
      * The function `getNodeByKey` searches for a node in a binary tree based on a given key, using
      * either recursive or iterative methods.
@@ -9044,34 +9245,53 @@ var dataStructureTyped = (() => {
       }
     }
     /**
-       * Time Complexity: O(log n)
-       * Space Complexity: O(log n)
-       * Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key. Space for the recursive call stack in the worst case.
-       * /
-    
-       /**
-       * Time Complexity: O(log n)
-       * Space Complexity: O(log n)
-       *
-       * The function `getNodes` returns an array of nodes that match a given identifier, using either a
-       * recursive or iterative approach.
-       * @param {ReturnType<C> | undefined} identifier - The `identifier` parameter is the value that you
-       * want to search for in the nodes of the binary tree. It can be of any type that is returned by the
-       * callback function `C`.
-       * @param {C} callback - The `callback` parameter is a function that takes a node of type `N` as its
-       * argument and returns a value of type `ReturnType<C>`. The `C` type parameter represents a callback
-       * function type that extends the `BTNCallback<N>` type. The `BTNCallback<N>` type is
-       * @param [onlyOne=false] - A boolean flag indicating whether to stop searching after finding the
-       * first node that matches the identifier. If set to true, the function will return an array
-       * containing only the first matching node. If set to false (default), the function will continue
-       * searching for all nodes that match the identifier and return an array containing
-       * @param {K | N | undefined} beginRoot - The `beginRoot` parameter represents the starting node
-       * for the traversal. It can be either a key value or a node object. If it is undefined, the
-       * traversal will start from the root of the tree.
-       * @param iterationType - The `iterationType` parameter determines the type of iteration to be
-       * performed on the binary tree. It can have two possible values:
-       * @returns The method returns an array of nodes (`N[]`).
-       */
+     * The function "isNotNodeInstance" checks if a potential key is a K.
+     * @param {any} potentialKey - The potentialKey parameter is of type any, which means it can be any
+     * data type.
+     * @returns a boolean value indicating whether the potentialKey is of type number or not.
+     */
+    isNotNodeInstance(potentialKey) {
+      return !(potentialKey instanceof BSTNode);
+    }
+    /**
+     * Time Complexity: O(log n) - Average case for a balanced tree.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
+     */
+    /**
+     * The function `ensureNode` returns the node corresponding to the given key if it is a node key,
+     * otherwise it returns the key itself.
+     * @param {K | N | undefined} key - The `key` parameter can be of type `K`, `N`, or
+     * `undefined`.
+     * @param iterationType - The `iterationType` parameter is an optional parameter that specifies the
+     * type of iteration to be performed. It has a default value of `IterationType.ITERATIVE`.
+     * @returns either a node object (N) or undefined.
+     */
+    ensureNode(key, iterationType = "ITERATIVE" /* ITERATIVE */) {
+      return this.isNotNodeInstance(key) ? this.getNodeByKey(key, iterationType) : key;
+    }
+    /**
+     * Time Complexity: O(log n) - Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
+     *
+     * The function `getNodes` returns an array of nodes that match a given identifier, using either a
+     * recursive or iterative approach.
+     * @param {ReturnType<C> | undefined} identifier - The `identifier` parameter is the value that you
+     * want to search for in the nodes of the binary tree. It can be of any type that is returned by the
+     * callback function `C`.
+     * @param {C} callback - The `callback` parameter is a function that takes a node of type `N` as its
+     * argument and returns a value of type `ReturnType<C>`. The `C` type parameter represents a callback
+     * function type that extends the `BTNCallback<N>` type. The `BTNCallback<N>` type is
+     * @param [onlyOne=false] - A boolean flag indicating whether to stop searching after finding the
+     * first node that matches the identifier. If set to true, the function will return an array
+     * containing only the first matching node. If set to false (default), the function will continue
+     * searching for all nodes that match the identifier and return an array containing
+     * @param {K | N | undefined} beginRoot - The `beginRoot` parameter represents the starting node
+     * for the traversal. It can be either a key value or a node object. If it is undefined, the
+     * traversal will start from the root of the tree.
+     * @param iterationType - The `iterationType` parameter determines the type of iteration to be
+     * performed on the binary tree. It can have two possible values:
+     * @returns The method returns an array of nodes (`N[]`).
+     */
     getNodes(identifier, callback = this._defaultOneParamCallback, onlyOne = false, beginRoot = this.root, iterationType = this.iterationType) {
       beginRoot = this.ensureNode(beginRoot);
       if (!beginRoot)
@@ -9124,13 +9344,12 @@ var dataStructureTyped = (() => {
       return ans;
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
-     * Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key. Space for the recursive call stack in the worst case.
+     * Time Complexity: O(log n) - Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
+     * Time Complexity: O(log n) - Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
      *
      * The `lesserOrGreaterTraverse` function traverses a binary tree and returns an array of nodes that
      * are either lesser or greater than a target node, depending on the specified comparison type.
@@ -9189,12 +9408,12 @@ var dataStructureTyped = (() => {
       }
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
+     * Time Complexity: O(log n) - Average case for a balanced tree. O(n) - Visiting each node once when identifier is not node's key.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(log n)
+     * Time Complexity: O(n) - Building a balanced tree from a sorted array.
+     * Space Complexity: O(n) - Additional space is required for the sorted array.
      *
      * The `perfectlyBalance` function balances a binary search tree by adding nodes in a way that
      * ensures the tree is perfectly balanced.
@@ -9252,8 +9471,8 @@ var dataStructureTyped = (() => {
      * Space Complexity: O(n) - Additional space is required for the sorted array.
      */
     /**
-     * Time Complexity: O(n)
-     * Space Complexity: O(log n)
+     * Time Complexity: O(n) - Visiting each node once.
+     * Space Complexity: O(log n) - Space for the recursive call stack in the worst case.
      *
      * The function checks if a binary tree is AVL balanced using either recursive or iterative approach.
      * @param iterationType - The `iterationType` parameter is used to determine the method of iteration
@@ -9320,7 +9539,7 @@ var dataStructureTyped = (() => {
     _compare(a, b) {
       const extractedA = this.extractor(a);
       const extractedB = this.extractor(b);
-      const compared = this.variant === "STANDARD" /* STANDARD */ ? extractedA - extractedB : extractedB - extractedA;
+      const compared = this.variant === "MIN" /* MIN */ ? extractedA - extractedB : extractedB - extractedA;
       return compared > 0 ? "gt" /* gt */ : compared < 0 ? "lt" /* lt */ : "eq" /* eq */;
     }
   };
@@ -9761,18 +9980,18 @@ var dataStructureTyped = (() => {
   };
   var AVLTree = class _AVLTree extends BST {
     /**
-     * The constructor function initializes an AVLTree object with optional keysOrNodesOrEntries and options.
-     * @param [keysOrNodesOrEntries] - The `keysOrNodesOrEntries` parameter is an optional iterable of `KeyOrNodeOrEntry<K, V, N>`
-     * objects. It represents a collection of nodes that will be added to the AVL tree during
+     * The constructor function initializes an AVLTree object with optional elements and options.
+     * @param [elements] - The `elements` parameter is an optional iterable of `BTNExemplar<K, V, N>`
+     * objects. It represents a collection of elements that will be added to the AVL tree during
      * initialization.
      * @param [options] - The `options` parameter is an optional object that allows you to customize the
      * behavior of the AVL tree. It is of type `Partial<AVLTreeOptions>`, which means that you can
      * provide only a subset of the properties defined in the `AVLTreeOptions` interface.
      */
-    constructor(keysOrNodesOrEntries = [], options) {
+    constructor(elements, options) {
       super([], options);
-      if (keysOrNodesOrEntries)
-        super.addMany(keysOrNodesOrEntries);
+      if (elements)
+        super.addMany(elements);
     }
     /**
      * The function creates a new AVL tree node with the specified key and value.
@@ -9800,12 +10019,12 @@ var dataStructureTyped = (() => {
       }, options));
     }
     /**
-     * The function checks if an keyOrNodeOrEntry is an instance of AVLTreeNode.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`.
-     * @returns a boolean value indicating whether the keyOrNodeOrEntry is an instance of the AVLTreeNode class.
+     * The function checks if an exemplar is an instance of AVLTreeNode.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`.
+     * @returns a boolean value indicating whether the exemplar is an instance of the AVLTreeNode class.
      */
-    isNode(keyOrNodeOrEntry) {
-      return keyOrNodeOrEntry instanceof AVLTreeNode;
+    isNode(exemplar) {
+      return exemplar instanceof AVLTreeNode;
     }
     /**
      * The function "isNotNodeInstance" checks if a potential key is a K.
@@ -9817,13 +10036,12 @@ var dataStructureTyped = (() => {
       return !(potentialKey instanceof AVLTreeNode);
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
-     * logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (BST) has logarithmic time complexity. constant space, as it doesn't use additional data structures that scale with input size.
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (BST) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (BST) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The function overrides the add method of a binary tree node and balances the tree after inserting
      * a new node.
@@ -9835,19 +10053,19 @@ var dataStructureTyped = (() => {
      */
     add(keyOrNodeOrEntry, value) {
       if (keyOrNodeOrEntry === null)
-        return false;
+        return void 0;
       const inserted = super.add(keyOrNodeOrEntry, value);
       if (inserted)
-        this._balancePath(keyOrNodeOrEntry);
+        this._balancePath(inserted);
       return inserted;
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (BST) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The delete method of the superclass (BST) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The function overrides the delete method of a binary tree, performs the deletion, and then
      * balances the tree if necessary.
@@ -9901,13 +10119,12 @@ var dataStructureTyped = (() => {
       return void 0;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     * constant time, as it performs a fixed number of operations. constant space, as it only uses a constant amount of memory.
+     * Time Complexity: O(1) - constant time, as it performs a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as it performs a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
      *
      * The function calculates the balance factor of a node in a binary tree.
      * @param {N} node - The parameter "node" represents a node in a binary tree data structure.
@@ -9923,13 +10140,12 @@ var dataStructureTyped = (() => {
         return node.right.height - node.left.height;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     * constant time, as it performs a fixed number of operations. constant space, as it only uses a constant amount of memory.
+     * Time Complexity: O(1) - constant time, as it performs a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as it performs a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
      *
      * The function updates the height of a node in a binary tree based on the heights of its left and
      * right children.
@@ -9947,13 +10163,12 @@ var dataStructureTyped = (() => {
         node.height = 1 + Math.max(node.right.height, node.left.height);
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
-     * logarithmic time, where "n" is the number of nodes in the tree. The method traverses the path from the inserted node to the root. constant space, as it doesn't use additional data structures that scale with input size.
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The method traverses the path from the inserted node to the root.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The method traverses the path from the inserted node to the root.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The `_balancePath` function is used to update the heights of nodes and perform rotation operations
      * to restore balance in an AVL tree after inserting a node.
@@ -9961,7 +10176,6 @@ var dataStructureTyped = (() => {
      * AVL tree that needs to be balanced.
      */
     _balancePath(node) {
-      node = this.ensureNode(node);
       const path = this.getPathToRoot(node, false);
       for (let i = 0; i < path.length; i++) {
         const A = path[i];
@@ -9988,13 +10202,12 @@ var dataStructureTyped = (() => {
       }
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     * constant time, as these methods perform a fixed number of operations. constant space, as they only use a constant amount of memory.
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      *
      * The function `_balanceLL` performs a left-left rotation to balance a binary tree.
      * @param {N} A - A is a node in a binary tree.
@@ -10028,12 +10241,12 @@ var dataStructureTyped = (() => {
         this._updateHeight(B);
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      *
      * The `_balanceLR` function performs a left-right rotation to balance a binary tree.
      * @param {N} A - A is a node in a binary tree.
@@ -10082,12 +10295,12 @@ var dataStructureTyped = (() => {
       C && this._updateHeight(C);
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      *
      * The function `_balanceRR` performs a right-right rotation to balance a binary tree.
      * @param {N} A - A is a node in a binary tree.
@@ -10122,12 +10335,12 @@ var dataStructureTyped = (() => {
       B && this._updateHeight(B);
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(1) - constant time, as these methods perform a fixed number of operations.
+     * Space Complexity: O(1) - constant space, as they only use a constant amount of memory.
      *
      * The function `_balanceRL` performs a right-left rotation to balance a binary tree.
      * @param {N} A - A is a node in a binary tree.
@@ -10192,23 +10405,23 @@ var dataStructureTyped = (() => {
   var RedBlackTree = class _RedBlackTree extends BST {
     /**
      * This is the constructor function for a Red-Black Tree data structure in TypeScript, which
-     * initializes the tree with optional nodes and options.
-     * @param [keysOrNodesOrEntries] - The `keysOrNodesOrEntries` parameter is an optional iterable of `KeyOrNodeOrEntry<K, V, N>`
-     * objects. It represents the initial nodes that will be added to the RBTree during its
+     * initializes the tree with optional elements and options.
+     * @param [elements] - The `elements` parameter is an optional iterable of `BTNExemplar<K, V, N>`
+     * objects. It represents the initial elements that will be added to the RBTree during its
      * construction. If this parameter is provided, the `addMany` method is called to add all the
-     * nodes to the
+     * elements to the
      * @param [options] - The `options` parameter is an optional object that allows you to customize the
      * behavior of the RBTree. It is of type `Partial<RBTreeOptions>`, which means that you can provide
      * only a subset of the properties defined in the `RBTreeOptions` interface.
      */
-    constructor(keysOrNodesOrEntries = [], options) {
+    constructor(elements, options) {
       super([], options);
       __publicField(this, "Sentinel", new RedBlackTreeNode(NaN));
       __publicField(this, "_root");
       __publicField(this, "_size", 0);
       this._root = this.Sentinel;
-      if (keysOrNodesOrEntries)
-        super.addMany(keysOrNodesOrEntries);
+      if (elements)
+        super.addMany(elements);
     }
     get root() {
       return this._root;
@@ -10240,54 +10453,18 @@ var dataStructureTyped = (() => {
      */
     createTree(options) {
       return new _RedBlackTree([], __spreadValues({
-        iterationType: this.iterationType
+        iterationType: this.iterationType,
+        variant: this.variant
       }, options));
     }
     /**
-     * The function `exemplarToNode` takes an keyOrNodeOrEntry and converts it into a node object if possible.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`, where:
-     * @param {V} [value] - The `value` parameter is an optional value that can be passed to the
-     * `exemplarToNode` function. It represents the value associated with the keyOrNodeOrEntry node. If a value
-     * is provided, it will be used when creating the new node. If no value is provided, the new node
-     * @returns a node of type N or undefined.
-     */
-    exemplarToNode(keyOrNodeOrEntry, value) {
-      let node;
-      if (keyOrNodeOrEntry === null || keyOrNodeOrEntry === void 0) {
-        return;
-      } else if (this.isNode(keyOrNodeOrEntry)) {
-        node = keyOrNodeOrEntry;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        const [key, value2] = keyOrNodeOrEntry;
-        if (key === void 0 || key === null) {
-          return;
-        } else {
-          node = this.createNode(key, value2, 1 /* RED */);
-        }
-      } else if (this.isNotNodeInstance(keyOrNodeOrEntry)) {
-        node = this.createNode(keyOrNodeOrEntry, value, 1 /* RED */);
-      } else {
-        return;
-      }
-      return node;
-    }
-    /**
-     * The function checks if an keyOrNodeOrEntry is an instance of the RedBlackTreeNode class.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`.
-     * @returns a boolean value indicating whether the keyOrNodeOrEntry is an instance of the RedBlackTreeNode
+     * The function checks if an exemplar is an instance of the RedBlackTreeNode class.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`.
+     * @returns a boolean value indicating whether the exemplar is an instance of the RedBlackTreeNode
      * class.
      */
-    isNode(keyOrNodeOrEntry) {
-      return keyOrNodeOrEntry instanceof RedBlackTreeNode;
-    }
-    /**
-     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
-     * Space Complexity: O(1)
-     */
-    isRealNode(node) {
-      if (node === this.Sentinel || node === void 0)
-        return false;
-      return node instanceof RedBlackTreeNode;
+    isNode(exemplar) {
+      return exemplar instanceof RedBlackTreeNode;
     }
     /**
      * The function "isNotNodeInstance" checks if a potential key is a K.
@@ -10299,12 +10476,39 @@ var dataStructureTyped = (() => {
       return !(potentialKey instanceof RedBlackTreeNode);
     }
     /**
-     * Time Complexity: O(log n)
+     * The function `exemplarToNode` takes an exemplar and converts it into a node object if possible.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`, where:
+     * @param {V} [value] - The `value` parameter is an optional value that can be passed to the
+     * `exemplarToNode` function. It represents the value associated with the exemplar node. If a value
+     * is provided, it will be used when creating the new node. If no value is provided, the new node
+     * @returns a node of type N or undefined.
+     */
+    exemplarToNode(exemplar, value) {
+      let node;
+      if (exemplar === null || exemplar === void 0) {
+        return;
+      } else if (this.isNode(exemplar)) {
+        node = exemplar;
+      } else if (this.isEntry(exemplar)) {
+        const [key, value2] = exemplar;
+        if (key === void 0 || key === null) {
+          return;
+        } else {
+          node = this.createNode(key, value2, 1 /* RED */);
+        }
+      } else if (this.isNotNodeInstance(exemplar)) {
+        node = this.createNode(exemplar, value, 1 /* RED */);
+      } else {
+        return;
+      }
+      return node;
+    }
+    /**
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
-     *  on average (where n is the number of nodes in the tree)
      */
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      *
      * The `add` function adds a new node to a binary search tree and performs necessary rotations and
@@ -10318,7 +10522,7 @@ var dataStructureTyped = (() => {
     add(keyOrNodeOrEntry, value) {
       const newNode = this.exemplarToNode(keyOrNodeOrEntry, value);
       if (newNode === void 0)
-        return false;
+        return;
       newNode.left = this.Sentinel;
       newNode.right = this.Sentinel;
       let y = void 0;
@@ -10334,7 +10538,7 @@ var dataStructureTyped = (() => {
             if (newNode !== x) {
               this._replaceNode(x, newNode);
             }
-            return false;
+            return;
           }
         }
       }
@@ -10349,23 +10553,21 @@ var dataStructureTyped = (() => {
       if (newNode.parent === void 0) {
         newNode.color = 0 /* BLACK */;
         this._size++;
-        return false;
+        return;
       }
       if (newNode.parent.parent === void 0) {
         this._size++;
-        return false;
+        return;
       }
       this._fixInsert(newNode);
       this._size++;
-      return true;
     }
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
-     *  on average (where n is the number of nodes in the tree)
      */
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      *
      * The `delete` function removes a node from a binary tree based on a given identifier and updates
@@ -10428,17 +10630,25 @@ var dataStructureTyped = (() => {
           this._fixDelete(x);
         }
         this._size--;
-        ans.push({ deleted: z, needBalanced: void 0 });
       };
       helper(this.root);
       return ans;
     }
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
+     * Space Complexity: O(1)
+     */
+    isRealNode(node) {
+      if (node === this.Sentinel || node === void 0)
+        return false;
+      return node instanceof RedBlackTreeNode;
+    }
+    /**
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      */
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      *
      * The function `getNode` retrieves a single node from a binary tree based on a given identifier and
@@ -10490,7 +10700,7 @@ var dataStructureTyped = (() => {
       return y;
     }
     /**
-     * Time Complexity: O(1)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      */
     clear() {
@@ -10567,11 +10777,11 @@ var dataStructureTyped = (() => {
       }
     }
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      */
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      *
      * The function `_fixDelete` is used to fix the red-black tree after a node deletion.
@@ -10661,11 +10871,11 @@ var dataStructureTyped = (() => {
       v.parent = u.parent;
     }
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      */
     /**
-     * Time Complexity: O(log n)
+     * Time Complexity: O(log n) on average (where n is the number of nodes in the tree)
      * Space Complexity: O(1)
      *
      * The `_fixInsert` function is used to fix the red-black tree after an insertion operation.
@@ -10748,11 +10958,11 @@ var dataStructureTyped = (() => {
     }
   };
   var TreeMultimap = class _TreeMultimap extends AVLTree {
-    constructor(keysOrNodesOrEntries = [], options) {
+    constructor(elements, options) {
       super([], options);
       __publicField(this, "_count", 0);
-      if (keysOrNodesOrEntries)
-        this.addMany(keysOrNodesOrEntries);
+      if (elements)
+        this.addMany(elements);
     }
     // TODO the _count is not accurate after nodes count modified
     get count() {
@@ -10779,44 +10989,13 @@ var dataStructureTyped = (() => {
       }, options));
     }
     /**
-     * The function `exemplarToNode` converts an keyOrNodeOrEntry object into a node object.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`, which means it
-     * can be one of the following:
-     * @param {V} [value] - The `value` parameter is an optional argument that represents the value
-     * associated with the node. It is of type `V`, which can be any data type. If no value is provided,
-     * it defaults to `undefined`.
-     * @param [count=1] - The `count` parameter is an optional parameter that specifies the number of
-     * times the value should be added to the node. If not provided, it defaults to 1.
-     * @returns a node of type `N` or `undefined`.
-     */
-    exemplarToNode(keyOrNodeOrEntry, value, count = 1) {
-      let node;
-      if (keyOrNodeOrEntry === void 0 || keyOrNodeOrEntry === null) {
-        return;
-      } else if (this.isNode(keyOrNodeOrEntry)) {
-        node = keyOrNodeOrEntry;
-      } else if (this.isEntry(keyOrNodeOrEntry)) {
-        const [key, value2] = keyOrNodeOrEntry;
-        if (key === void 0 || key === null) {
-          return;
-        } else {
-          node = this.createNode(key, value2, count);
-        }
-      } else if (this.isNotNodeInstance(keyOrNodeOrEntry)) {
-        node = this.createNode(keyOrNodeOrEntry, value, count);
-      } else {
-        return;
-      }
-      return node;
-    }
-    /**
-     * The function checks if an keyOrNodeOrEntry is an instance of the TreeMultimapNode class.
-     * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter is of type `KeyOrNodeOrEntry<K, V, N>`.
-     * @returns a boolean value indicating whether the keyOrNodeOrEntry is an instance of the TreeMultimapNode
+     * The function checks if an exemplar is an instance of the TreeMultimapNode class.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`.
+     * @returns a boolean value indicating whether the exemplar is an instance of the TreeMultimapNode
      * class.
      */
-    isNode(keyOrNodeOrEntry) {
-      return keyOrNodeOrEntry instanceof TreeMultimapNode;
+    isNode(exemplar) {
+      return exemplar instanceof TreeMultimapNode;
     }
     /**
      * The function "isNotNodeInstance" checks if a potential key is a K.
@@ -10828,13 +11007,43 @@ var dataStructureTyped = (() => {
       return !(potentialKey instanceof TreeMultimapNode);
     }
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
-     * logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity. constant space, as it doesn't use additional data structures that scale with input size.
+     * The function `exemplarToNode` converts an exemplar object into a node object.
+     * @param exemplar - The `exemplar` parameter is of type `BTNExemplar<K, V, N>`, which means it
+     * can be one of the following:
+     * @param {V} [value] - The `value` parameter is an optional argument that represents the value
+     * associated with the node. It is of type `V`, which can be any data type. If no value is provided,
+     * it defaults to `undefined`.
+     * @param [count=1] - The `count` parameter is an optional parameter that specifies the number of
+     * times the value should be added to the node. If not provided, it defaults to 1.
+     * @returns a node of type `N` or `undefined`.
+     */
+    exemplarToNode(exemplar, value, count = 1) {
+      let node;
+      if (exemplar === void 0 || exemplar === null) {
+        return;
+      } else if (this.isNode(exemplar)) {
+        node = exemplar;
+      } else if (this.isEntry(exemplar)) {
+        const [key, value2] = exemplar;
+        if (key === void 0 || key === null) {
+          return;
+        } else {
+          node = this.createNode(key, value2, count);
+        }
+      } else if (this.isNotNodeInstance(exemplar)) {
+        node = this.createNode(exemplar, value, count);
+      } else {
+        return;
+      }
+      return node;
+    }
+    /**
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The function overrides the add method of a binary tree node and adds a new node to the tree.
      * @param keyOrNodeOrEntry - The `keyOrNodeOrEntry` parameter can be either a key, a node, or an
@@ -10851,22 +11060,21 @@ var dataStructureTyped = (() => {
     add(keyOrNodeOrEntry, value, count = 1) {
       const newNode = this.exemplarToNode(keyOrNodeOrEntry, value, count);
       if (newNode === void 0)
-        return false;
+        return;
       const orgNodeCount = (newNode == null ? void 0 : newNode.count) || 0;
       const inserted = super.add(newNode);
       if (inserted) {
         this._count += orgNodeCount;
       }
-      return true;
+      return inserted;
     }
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(1)
-     * logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity. constant space, as it doesn't use additional data structures that scale with input size.
+     * Time Complexity: O(k log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(k log n) - logarithmic time, where "n" is the number of nodes in the tree. The add method of the superclass (AVLTree) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The function overrides the addMany method to add multiple keys, nodes, or entries to a data
      * structure.
@@ -10878,13 +11086,12 @@ var dataStructureTyped = (() => {
       return super.addMany(keysOrNodesOrEntries);
     }
     /**
-     * Time Complexity: O(n log n)
-     * Space Complexity: O(n)
-     * logarithmic time for each insertion, where "n" is the number of nodes in the tree. This is because the method calls the add method for each node. linear space, as it creates an array to store the sorted nodes.
+     * Time Complexity: O(1) - constant time, as it performs basic pointer assignments.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
      */
     /**
-     * Time Complexity: O(n log n)
-     * Space Complexity: O(n)
+     * Time Complexity: O(n log n) - logarithmic time for each insertion, where "n" is the number of nodes in the tree. This is because the method calls the add method for each node.
+     * Space Complexity: O(n) - linear space, as it creates an array to store the sorted nodes.
      *
      * The `perfectlyBalance` function takes a sorted array of nodes and builds a balanced binary search
      * tree using either a recursive or iterative approach.
@@ -10929,13 +11136,12 @@ var dataStructureTyped = (() => {
       }
     }
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(1)
-     * logarithmic time for each insertion, where "n" is the number of nodes in the tree, and "k" is the number of keys to be inserted. This is because the method iterates through the keys and calls the add method for each. constant space, as it doesn't use additional data structures that scale with input size.
+     * Time Complexity: O(k log n) - logarithmic time for each insertion, where "n" is the number of nodes in the tree, and "k" is the number of keys to be inserted. This is because the method iterates through the keys and calls the add method for each.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      */
     /**
-     * Time Complexity: O(k log n)
-     * Space Complexity: O(1)
+     * Time Complexity: O(log n) - logarithmic time, where "n" is the number of nodes in the tree. The delete method of the superclass (AVLTree) has logarithmic time complexity.
+     * Space Complexity: O(1) - constant space, as it doesn't use additional data structures that scale with input size.
      *
      * The `delete` function in TypeScript is used to remove a node from a binary tree, taking into
      * account the count of the node and balancing the tree if necessary.
@@ -11005,13 +11211,10 @@ var dataStructureTyped = (() => {
       return deletedResult;
     }
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
+     * Time Complexity: O(n log n) - logarithmic time for each insertion, where "n" is the number of nodes in the tree. This is because the method calls the add method for each node.
+     * Space Complexity: O(n) - linear space, as it creates an array to store the sorted nodes.
      */
     /**
-     * Time Complexity: O(1)
-     * Space Complexity: O(1)
-     *
      * The clear() function clears the contents of a data structure and sets the count to zero.
      */
     clear() {
@@ -11033,6 +11236,45 @@ var dataStructureTyped = (() => {
       const cloned = this.createTree();
       this.bfs((node) => cloned.add(node.key, node.value, node.count));
       return cloned;
+    }
+    /**
+     * Time Complexity: O(1) - constant time, as it performs basic pointer assignments.
+     * Space Complexity: O(1) - constant space, as it only uses a constant amount of memory.
+     *
+     * The function adds a new node to a binary tree, either as the left child or the right child of a
+     * given parent node.
+     * @param {N | undefined} newNode - The `newNode` parameter represents the node that needs to be
+     * added to the binary tree. It can be of type `N` (which represents a node in the binary tree) or
+     * `undefined` if there is no node to add.
+     * @param {K | N | undefined} parent - The `parent` parameter represents the parent node to
+     * which the new node will be added as a child. It can be either a node object (`N`) or a key value
+     * (`K`).
+     * @returns The method `_addTo` returns either the `parent.left` or `parent.right` node that was
+     * added, or `undefined` if no node was added.
+     */
+    _addTo(newNode, parent) {
+      parent = this.ensureNode(parent);
+      if (parent) {
+        if (parent.left === void 0) {
+          parent.left = newNode;
+          if (newNode !== void 0) {
+            this._size = this.size + 1;
+            this._count += newNode.count;
+          }
+          return parent.left;
+        } else if (parent.right === void 0) {
+          parent.right = newNode;
+          if (newNode !== void 0) {
+            this._size = this.size + 1;
+            this._count += newNode.count;
+          }
+          return parent.right;
+        } else {
+          return;
+        }
+      } else {
+        return;
+      }
     }
     /**
      * The `_swapProperties` function swaps the key, value, count, and height properties between two nodes.
@@ -11112,14 +11354,14 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/priority-queue/priority-queue.ts
   var PriorityQueue = class extends Heap {
-    constructor(elements = [], options) {
+    constructor(elements, options) {
       super(elements, options);
     }
   };
 
   // src/data-structures/priority-queue/min-priority-queue.ts
   var MinPriorityQueue = class extends PriorityQueue {
-    constructor(elements = [], options = {
+    constructor(elements, options = {
       comparator: (a, b) => {
         if (!(typeof a === "number" && typeof b === "number")) {
           throw new Error("The a, b params of compare function must be number");
@@ -11134,7 +11376,7 @@ var dataStructureTyped = (() => {
 
   // src/data-structures/priority-queue/max-priority-queue.ts
   var MaxPriorityQueue = class extends PriorityQueue {
-    constructor(elements = [], options = {
+    constructor(elements, options = {
       comparator: (a, b) => {
         if (!(typeof a === "number" && typeof b === "number")) {
           throw new Error("The a, b params of compare function must be number");
@@ -11148,397 +11390,488 @@ var dataStructureTyped = (() => {
   };
 
   // src/data-structures/matrix/matrix.ts
-  var Matrix = class _Matrix {
+  var MatrixNTI2D = class {
     /**
-     * The constructor function initializes a matrix object with the provided data and options, or with
-     * default values if no options are provided.
-     * @param {number[][]} data - A 2D array of numbers representing the data for the matrix.
-     * @param [options] - The `options` parameter is an optional object that can contain the following
-     * properties:
+     * The constructor creates a matrix with the specified number of rows and columns, and initializes all elements to a
+     * given initial value or 0 if not provided.
+     * @param options - An object containing the following properties:
      */
-    constructor(data, options) {
-      __publicField(this, "_rows", 0);
-      __publicField(this, "_cols", 0);
-      __publicField(this, "_data");
-      var _a, _b, _c;
-      if (options) {
-        const { rows, cols, addFn, subtractFn, multiplyFn } = options;
-        if (typeof rows === "number" && rows > 0)
-          this._rows = rows;
-        else
-          this._rows = data.length;
-        if (typeof cols === "number" && cols > 0)
-          this._cols = cols;
-        else
-          this._cols = ((_a = data[0]) == null ? void 0 : _a.length) || 0;
-        if (addFn)
-          this._addFn = addFn;
-        if (subtractFn)
-          this._subtractFn = subtractFn;
-        if (multiplyFn)
-          this._multiplyFn = multiplyFn;
-      } else {
-        this._rows = data.length;
-        this._cols = (_c = (_b = data[0]) == null ? void 0 : _b.length) != null ? _c : 0;
-      }
-      if (data.length > 0) {
-        this._data = data;
-      } else {
-        this._data = [];
-        for (let i = 0; i < this.rows; i++) {
-          this._data[i] = new Array(this.cols).fill(0);
-        }
-      }
+    constructor(options) {
+      __publicField(this, "_matrix");
+      const { row, col, initialVal } = options;
+      this._matrix = new Array(row).fill(void 0).map(() => new Array(col).fill(initialVal || 0));
     }
-    get rows() {
-      return this._rows;
+    /* The `toArray` method returns the matrix as a two-dimensional array. It converts the internal representation of the
+    matrix, which is an array of arrays, into a format that is more commonly used in JavaScript. */
+    toArray() {
+      return this._matrix;
     }
-    get cols() {
-      return this._cols;
-    }
-    get data() {
-      return this._data;
-    }
-    get addFn() {
-      return this._addFn;
-    }
-    get subtractFn() {
-      return this._subtractFn;
-    }
-    get multiplyFn() {
-      return this._multiplyFn;
+  };
+
+  // src/data-structures/matrix/vector2d.ts
+  var Vector2D = class _Vector2D {
+    constructor(x = 0, y = 0, w = 1) {
+      this.x = x;
+      this.y = y;
+      this.w = w;
     }
     /**
-     * The `get` function returns the value at the specified row and column index if it is a valid index.
-     * @param {number} row - The `row` parameter represents the row index of the element you want to
-     * retrieve from the data array.
-     * @param {number} col - The parameter "col" represents the column number of the element you want to
-     * retrieve from the data array.
-     * @returns The `get` function returns a number if the provided row and column indices are valid.
-     * Otherwise, it returns `undefined`.
+     * The function checks if the x and y values of a point are both zero.
+     * @returns A boolean value indicating whether both the x and y properties of the object are equal to 0.
      */
-    get(row, col) {
-      if (this.isValidIndex(row, col)) {
-        return this.data[row][col];
-      }
+    get isZero() {
+      return this.x === 0 && this.y === 0;
     }
     /**
-     * The set function updates the value at a specified row and column in a two-dimensional array.
-     * @param {number} row - The "row" parameter represents the row index of the element in a
-     * two-dimensional array or matrix. It specifies the row where the value will be set.
-     * @param {number} col - The "col" parameter represents the column index of the element in a
-     * two-dimensional array.
-     * @param {number} value - The value parameter represents the number that you want to set at the
-     * specified row and column in the data array.
-     * @returns a boolean value. It returns true if the index (row, col) is valid and the value is
-     * successfully set in the data array. It returns false if the index is invalid and the value is not
-     * set.
+     * The above function calculates the length of a vector using the Pythagorean theorem.
+     * @returns The length of a vector, calculated using the Pythagorean theorem.
      */
-    set(row, col, value) {
-      if (this.isValidIndex(row, col)) {
-        this.data[row][col] = value;
+    get length() {
+      return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+    /**
+     * The function calculates the square of the length of a vector.
+     * @returns The method is returning the sum of the squares of the x and y values.
+     */
+    get lengthSq() {
+      return this.x * this.x + this.y * this.y;
+    }
+    /**
+     * The "rounded" function returns a new Vector2D object with the x and y values rounded to the nearest whole number.
+     * @returns The method is returning a new instance of the Vector2D class with the x and y values rounded to the nearest
+     * whole number.
+     */
+    get rounded() {
+      return new _Vector2D(Math.round(this.x), Math.round(this.y));
+    }
+    /**
+     * The function "add" takes two Vector2D objects as parameters and returns a new Vector2D object with the sum of their
+     * x and y components.
+     * @param {Vector2D} vector1 - The parameter `vector1` is an instance of the `Vector2D` class. It represents a
+     * 2-dimensional vector with an `x` and `y` component.
+     * @param {Vector2D} vector2 - The parameter "vector2" is of type Vector2D. It represents a 2-dimensional vector with
+     * an x and y component.
+     * @returns The method is returning a new instance of the Vector2D class with the x and y components of the two input
+     * vectors added together.
+     */
+    static add(vector1, vector2) {
+      return new _Vector2D(vector1.x + vector2.x, vector1.y + vector2.y);
+    }
+    /**
+     * The subtract function takes two Vector2D objects as parameters and returns a new Vector2D object with the x and y
+     * components subtracted.
+     * @param {Vector2D} vector1 - The parameter `vector1` is an instance of the `Vector2D` class, representing a
+     * 2-dimensional vector. It has properties `x` and `y` which represent the x and y components of the vector
+     * respectively.
+     * @param {Vector2D} vector2 - The parameter "vector2" is a Vector2D object. It represents the second vector that you
+     * want to subtract from the first vector.
+     * @returns The method is returning a new Vector2D object with the x and y components subtracted from vector1 and
+     * vector2.
+     */
+    static subtract(vector1, vector2) {
+      return new _Vector2D(vector1.x - vector2.x, vector1.y - vector2.y);
+    }
+    /**
+     * The function subtracts a given value from the x and y components of a Vector2D object and returns a new Vector2D
+     * object.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D, which represents a 2-dimensional vector with
+     * x and y components.
+     * @param {number} value - The "value" parameter is a number that will be subtracted from both the x and y components
+     * of the "vector" parameter.
+     * @returns A new Vector2D object with the x and y values subtracted by the given value.
+     */
+    static subtractValue(vector, value) {
+      return new _Vector2D(vector.x - value, vector.y - value);
+    }
+    /**
+     * The function multiplies a Vector2D object by a given value.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D, which represents a 2-dimensional vector with
+     * x and y components.
+     * @param {number} value - The "value" parameter is a number that represents the value by which the x and y components
+     * of the vector will be multiplied.
+     * @returns A new Vector2D object with the x and y values multiplied by the given value.
+     */
+    static multiply(vector, value) {
+      return new _Vector2D(vector.x * value, vector.y * value);
+    }
+    /**
+     * The function divides the x and y components of a Vector2D by a given value and returns a new Vector2D.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D, which represents a 2-dimensional vector with
+     * x and y components.
+     * @param {number} value - The value parameter is a number that will be used to divide the x and y components of the
+     * vector.
+     * @returns A new instance of the Vector2D class with the x and y values divided by the given value.
+     */
+    static divide(vector, value) {
+      return new _Vector2D(vector.x / value, vector.y / value);
+    }
+    /**
+     * The function checks if two Vector2D objects are equal by comparing their x and y values.
+     * @param {Vector2D} vector1 - The parameter `vector1` is of type `Vector2D`, which represents a 2-dimensional vector.
+     * It has two properties: `x` and `y`, which represent the x and y components of the vector, respectively.
+     * @param {Vector2D} vector2 - The parameter "vector2" is of type Vector2D.
+     * @returns a boolean value, which indicates whether the two input vectors are equal or not.
+     */
+    static equals(vector1, vector2) {
+      return vector1.x === vector2.x && vector1.y === vector2.y;
+    }
+    /**
+     * The function checks if two Vector2D objects are equal within a specified rounding factor.
+     * @param {Vector2D} vector1 - The first vector to compare.
+     * @param {Vector2D} vector2 - The parameter "vector2" is a Vector2D object, which represents a 2-dimensional vector.
+     * It is used as one of the inputs for the "equalsRounded" function.
+     * @param [roundingFactor=12] - The roundingFactor parameter is used to determine the threshold for considering two
+     * vectors as equal. If the absolute difference in the x and y components of the vectors is less than the
+     * roundingFactor, the vectors are considered equal.
+     * @returns a boolean value.
+     */
+    static equalsRounded(vector1, vector2, roundingFactor = 12) {
+      const vector = _Vector2D.abs(_Vector2D.subtract(vector1, vector2));
+      if (vector.x < roundingFactor && vector.y < roundingFactor) {
         return true;
       }
       return false;
     }
     /**
-     * The function checks if the dimensions of the given matrix match the dimensions of the current
-     * matrix.
-     * @param {Matrix} matrix - The parameter `matrix` is of type `Matrix`.
-     * @returns a boolean value.
+     * The normalize function takes a vector as input and returns a normalized version of the vector.Normalizes the vector if it matches a certain condition
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D.
+     * @returns the normalized vector if its length is greater than a very small value (epsilon), otherwise it returns the
+     * original vector.
      */
-    isMatchForCalculate(matrix) {
-      return this.rows === matrix.rows && this.cols === matrix.cols;
+    static normalize(vector) {
+      const length = vector.length;
+      if (length > 2220446049250313e-31) {
+        return _Vector2D.divide(vector, length);
+      }
+      return vector;
     }
     /**
-     * The `add` function adds two matrices together, returning a new matrix with the result.
-     * @param {Matrix} matrix - The `matrix` parameter is an instance of the `Matrix` class.
-     * @returns The `add` method returns a new `Matrix` object that represents the result of adding the
-     * current matrix with the provided `matrix` parameter.
+     * The function truncates a vector to a maximum length if it exceeds that length.Adjusts x and y so that the length of the vector does not exceed max
+     * @param {Vector2D} vector - A 2D vector represented by the Vector2D class.
+     * @param {number} max - The `max` parameter is a number that represents the maximum length that the `vector` should
+     * have.
+     * @returns either the original vector or a truncated version of the vector, depending on whether the length of the
+     * vector is greater than the maximum value specified.
      */
-    add(matrix) {
-      if (!this.isMatchForCalculate(matrix)) {
-        throw new Error("Matrix dimensions must match for addition.");
+    static truncate(vector, max) {
+      if (vector.length > max) {
+        return _Vector2D.multiply(_Vector2D.normalize(vector), max);
       }
-      const resultData = [];
-      for (let i = 0; i < this.rows; i++) {
-        resultData[i] = [];
-        for (let j = 0; j < this.cols; j++) {
-          const a = this.get(i, j), b = matrix.get(i, j);
-          if (a !== void 0 && b !== void 0) {
-            const added = this._addFn(a, b);
-            if (added) {
-              resultData[i][j] = added;
-            }
+      return vector;
+    }
+    /**
+     * The function returns a new Vector2D object that is perpendicular to the input vector.The vector that is perpendicular to this one
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D.
+     * @returns A new Vector2D object is being returned.
+     */
+    static perp(vector) {
+      return new _Vector2D(-vector.y, vector.x);
+    }
+    /**
+     * The reverse function takes a Vector2D object and returns a new Vector2D object with the negated x and y values.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D, which represents a 2-dimensional vector. It
+     * has two properties: "x" and "y", which represent the x and y components of the vector, respectively.
+     * @returns A new Vector2D object with the negated x and y values of the input vector. Returns the vector that is the reverse of this vector
+     */
+    static reverse(vector) {
+      return new _Vector2D(-vector.x, -vector.y);
+    }
+    /**
+     * The function takes a Vector2D object as input and returns a new Vector2D object with the absolute values of its x
+     * and y components.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D, which represents a 2-dimensional vector. It
+     * has two properties: "x" and "y", which represent the x and y components of the vector, respectively.
+     * @returns The method is returning a new Vector2D object with the absolute values of the x and y components of the
+     * input vector.
+     */
+    static abs(vector) {
+      return new _Vector2D(Math.abs(vector.x), Math.abs(vector.y));
+    }
+    /**
+     * The dot function calculates the dot product of two 2D vectors.The dot product of v1 and v2
+     * @param {Vector2D} vector1 - The parameter `vector1` represents a 2D vector with its x and y components.
+     * @param {Vector2D} vector2 - The "vector2" parameter is a Vector2D object. It represents a two-dimensional vector
+     * with an x and y component.
+     * @returns The dot product of the two input vectors.
+     */
+    static dot(vector1, vector2) {
+      return vector1.x * vector2.x + vector1.y * vector2.y;
+    }
+    // /**
+    //  * Transform vectors based on the current tranformation matrices: translation, rotation and scale
+    //  * @param vectors The vectors to transform
+    //  */
+    // static transform(vector: Vector2D, transformation: Matrix2D): Vector2D {
+    //     return Matrix2D.multiplyByVector(transformation, vector)
+    // }
+    // /**
+    //  * Transform vectors based on the current tranformation matrices: translation, rotation and scale
+    //  * @param vectors The vectors to transform
+    //  */
+    // static transformList(vectors: Vector2D[], transformation: Matrix2D): Vector2D[] {
+    //     return vectors.map(vector => Matrix2D.multiplyByVector(transformation, vector))
+    // }
+    /**
+     * The function calculates the distance between two points in a two-dimensional space.
+     * @param {Vector2D} vector1 - The parameter `vector1` represents the first vector in 2D space, while `vector2`
+     * represents the second vector. Each vector has an `x` and `y` component, which represent their respective coordinates
+     * in the 2D space.
+     * @param {Vector2D} vector2 - The `vector2` parameter represents the second vector in the calculation of distance. It
+     * is an instance of the `Vector2D` class, which typically has properties `x` and `y` representing the coordinates of
+     * the vector in a 2D space.
+     * @returns The distance between vector1 and vector2.
+     */
+    static distance(vector1, vector2) {
+      const ySeparation = vector2.y - vector1.y;
+      const xSeparation = vector2.x - vector1.x;
+      return Math.sqrt(ySeparation * ySeparation + xSeparation * xSeparation);
+    }
+    /**
+     * The function calculates the squared distance between two 2D vectors.
+     * @param {Vector2D} vector1 - The parameter `vector1` represents the first vector, which is an instance of the
+     * `Vector2D` class. It contains the x and y coordinates of the vector.
+     * @param {Vector2D} vector2 - The `vector2` parameter represents the second vector in a two-dimensional space. It has
+     * properties `x` and `y` which represent the coordinates of the vector.
+     * @returns the square of the distance between the two input vectors.
+     */
+    static distanceSq(vector1, vector2) {
+      const ySeparation = vector2.y - vector1.y;
+      const xSeparation = vector2.x - vector1.x;
+      return ySeparation * ySeparation + xSeparation * xSeparation;
+    }
+    /**
+     * The sign function determines the sign of the cross product between two 2D vectors.
+     * (assuming the Y axis is pointing down, X axis to right like a Window app)
+     * @param {Vector2D} vector1 - The parameter `vector1` is of type `Vector2D`, which represents a 2-dimensional vector.
+     * It likely has properties `x` and `y` representing the x and y components of the vector, respectively.
+     * @param {Vector2D} vector2 - The above code defines a function called "sign" that takes two parameters: vector1 and
+     * vector2. Both vector1 and vector2 are of type Vector2D.
+     * @returns either -1 or 1. Returns positive if v2 is clockwise of this vector, negative if counterclockwise
+     */
+    static sign(vector1, vector2) {
+      if (vector1.y * vector2.x > vector1.x * vector2.y) {
+        return -1;
+      }
+      return 1;
+    }
+    /**
+     * The function calculates the angle between a given vector and the negative y-axis.
+     * @param {Vector2D} vector - The "vector" parameter is an instance of the Vector2D class, which represents a
+     * 2-dimensional vector. It has two properties: "x" and "y", which represent the x and y components of the vector,
+     * respectively.
+     * @returns the angle between the given vector and the vector (0, -1) in radians.Returns the angle between origin and the given vector in radians
+     */
+    static angle(vector) {
+      const origin = new _Vector2D(0, -1);
+      const radian = Math.acos(_Vector2D.dot(vector, origin) / (vector.length * origin.length));
+      return _Vector2D.sign(vector, origin) === 1 ? Math.PI * 2 - radian : radian;
+    }
+    /**
+     * The function "random" generates a random Vector2D object with x and y values within the specified range.
+     * @param {number} maxX - The maxX parameter represents the maximum value for the x-coordinate of the random vector.
+     * @param {number} maxY - The `maxY` parameter represents the maximum value for the y-coordinate of the generated
+     * random vector.
+     * @returns a new instance of the Vector2D class with random x and y values.
+     */
+    static random(maxX, maxY) {
+      const randX = Math.floor(Math.random() * maxX - maxX / 2);
+      const randY = Math.floor(Math.random() * maxY - maxY / 2);
+      return new _Vector2D(randX, randY);
+    }
+    /**
+     * The function sets the values of x and y to zero.
+     */
+    zero() {
+      this.x = 0;
+      this.y = 0;
+    }
+  };
+
+  // src/data-structures/matrix/matrix2d.ts
+  var Matrix2D = class _Matrix2D {
+    /**
+     * The constructor function initializes a Matrix2D object with either a default identity matrix, or a provided matrix
+     * or Vector2D object.
+     * @param {number[][] | Vector2D} [value] - The `value` parameter can be either a 2D array of numbers (`number[][]`) or
+     * an instance of the `Vector2D` class.
+     */
+    constructor(value) {
+      __publicField(this, "_matrix");
+      if (typeof value === "undefined") {
+        this._matrix = _Matrix2D.identity;
+      } else if (value instanceof Vector2D) {
+        this._matrix = _Matrix2D.identity;
+        this._matrix[0][0] = value.x;
+        this._matrix[1][0] = value.y;
+        this._matrix[2][0] = value.w;
+      } else {
+        this._matrix = value;
+      }
+    }
+    /**
+     * The function returns a 2D array with three empty arrays.
+     * @returns An empty 2-dimensional array with 3 empty arrays inside.
+     */
+    static get empty() {
+      return [[], [], []];
+    }
+    /**
+     * The above function returns a 3x3 identity matrix.
+     * @returns The method is returning a 2-dimensional array of numbers representing the identity matrix.
+     */
+    static get identity() {
+      return [
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]
+      ];
+    }
+    /**
+     * The function returns a two-dimensional array of numbers.
+     * @returns The getter method is returning the value of the private variable `_matrix`, which is a two-dimensional
+     * array of numbers.
+     */
+    get m() {
+      return this._matrix;
+    }
+    /**
+     * The function takes two 2D matrices as input and returns their sum as a new 2D matrix.
+     * @param {Matrix2D} matrix1 - Matrix2D - The first matrix to be added.
+     * @param {Matrix2D} matrix2 - The parameter `matrix2` is a Matrix2D object.
+     * @returns a new instance of the Matrix2D class, which is created using the result array.
+     */
+    static add(matrix1, matrix2) {
+      const result = _Matrix2D.empty;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          result[i][j] = matrix1.m[i][j] + matrix2.m[i][j];
+        }
+      }
+      return new _Matrix2D(result);
+    }
+    /**
+     * The function subtracts two 2D matrices and returns the result as a new Matrix2D object.
+     * @param {Matrix2D} matrix1 - Matrix2D - The first matrix to subtract from.
+     * @param {Matrix2D} matrix2 - Matrix2D is a class representing a 2D matrix. It has a property `m` which is a 2D array
+     * representing the matrix elements.
+     * @returns a new instance of the Matrix2D class, which is created using the result array.
+     */
+    static subtract(matrix1, matrix2) {
+      const result = _Matrix2D.empty;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          result[i][j] = matrix1.m[i][j] - matrix2.m[i][j];
+        }
+      }
+      return new _Matrix2D(result);
+    }
+    /**
+     * The function multiplies two 2D matrices and returns the result as a new Matrix2D object.
+     * @param {Matrix2D} matrix1 - A 2D matrix represented by the Matrix2D class.
+     * @param {Matrix2D} matrix2 - The parameter `matrix2` is a 2D matrix of size 3x3.
+     * @returns a new instance of the Matrix2D class, created using the result array.
+     */
+    static multiply(matrix1, matrix2) {
+      const result = _Matrix2D.empty;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          result[i][j] = 0;
+          for (let k = 0; k < 3; k++) {
+            result[i][j] += matrix1.m[i][k] * matrix2.m[k][j];
           }
         }
       }
-      return new _Matrix(resultData, {
-        rows: this.rows,
-        cols: this.cols,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
+      return new _Matrix2D(result);
     }
     /**
-     * The `subtract` function performs element-wise subtraction between two matrices and returns a new
-     * matrix with the result.
-     * @param {Matrix} matrix - The `matrix` parameter is an instance of the `Matrix` class. It
-     * represents the matrix that you want to subtract from the current matrix.
-     * @returns a new Matrix object with the result of the subtraction operation.
+     * The function multiplies each element of a 2D matrix by a given value and returns the resulting matrix.
+     * @param {Matrix2D} matrix - The `matrix` parameter is an instance of the `Matrix2D` class, which represents a 2D
+     * matrix. It contains a property `m` that is a 2D array representing the matrix elements.
+     * @param {number} value - The `value` parameter is a number that you want to multiply each element of the `matrix` by.
+     * @returns a new instance of the Matrix2D class, which is created using the result array.
      */
-    subtract(matrix) {
-      if (!this.isMatchForCalculate(matrix)) {
-        throw new Error("Matrix dimensions must match for subtraction.");
-      }
-      const resultData = [];
-      for (let i = 0; i < this.rows; i++) {
-        resultData[i] = [];
-        for (let j = 0; j < this.cols; j++) {
-          const a = this.get(i, j), b = matrix.get(i, j);
-          if (a !== void 0 && b !== void 0) {
-            const subtracted = this._subtractFn(a, b);
-            if (subtracted) {
-              resultData[i][j] = subtracted;
-            }
-          }
+    static multiplyByValue(matrix, value) {
+      const result = _Matrix2D.empty;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          result[i][j] = matrix.m[i][j] * value;
         }
       }
-      return new _Matrix(resultData, {
-        rows: this.rows,
-        cols: this.cols,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
+      return new _Matrix2D(result);
     }
     /**
-     * The `multiply` function performs matrix multiplication between two matrices and returns the result
-     * as a new matrix.
-     * @param {Matrix} matrix - The `matrix` parameter is an instance of the `Matrix` class.
-     * @returns a new Matrix object.
+     * The function multiplies a 2D matrix by a 2D vector and returns the result as a 2D vector.
+     * @param {Matrix2D} matrix - The parameter "matrix" is of type Matrix2D. It represents a 2-dimensional matrix.
+     * @param {Vector2D} vector - The "vector" parameter is a 2D vector, represented by an object of type Vector2D.
+     * @returns a Vector2D.
      */
-    multiply(matrix) {
-      if (this.cols !== matrix.rows) {
-        throw new Error("Matrix dimensions must be compatible for multiplication (A.cols = B.rows).");
-      }
-      const resultData = [];
-      for (let i = 0; i < this.rows; i++) {
-        resultData[i] = [];
-        for (let j = 0; j < matrix.cols; j++) {
-          let sum;
-          for (let k = 0; k < this.cols; k++) {
-            const a = this.get(i, k), b = matrix.get(k, j);
-            if (a !== void 0 && b !== void 0) {
-              const multiplied = this.multiplyFn(a, b);
-              if (multiplied !== void 0) {
-                sum = this.addFn(sum, multiplied);
-              }
-            }
-          }
-          if (sum !== void 0)
-            resultData[i][j] = sum;
-        }
-      }
-      return new _Matrix(resultData, {
-        rows: this.rows,
-        cols: matrix.cols,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
+    static multiplyByVector(matrix, vector) {
+      const resultMatrix = _Matrix2D.multiply(matrix, new _Matrix2D(vector));
+      return resultMatrix.toVector();
     }
     /**
-     * The transpose function takes a matrix and returns a new matrix that is the transpose of the
-     * original matrix.
-     * @returns The transpose() function returns a new Matrix object with the transposed data.
+     * The function returns a 2D matrix that scales and flips a vector around the center of a given width and height.
+     * @param {number} width - The width parameter represents the width of the view or the canvas. It is a number that
+     * specifies the width in pixels or any other unit of measurement.
+     * @param {number} height - The height parameter represents the height of the view or the canvas. It is used to
+     * calculate the centerY value, which is the vertical center of the view.
+     * @returns a Matrix2D object.
      */
-    transpose() {
-      if (this.data.some((row) => row.length !== this.rows)) {
-        throw new Error("Matrix must be rectangular for transposition.");
-      }
-      const resultData = [];
-      for (let j = 0; j < this.cols; j++) {
-        resultData[j] = [];
-        for (let i = 0; i < this.rows; i++) {
-          const trans = this.get(i, j);
-          if (trans !== void 0)
-            resultData[j][i] = trans;
-        }
-      }
-      return new _Matrix(resultData, {
-        rows: this.cols,
-        cols: this.rows,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
+    static view(width, height) {
+      const scaleStep = 1;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const flipX = Math.cos(Math.PI);
+      return new _Matrix2D([
+        [scaleStep, 0, centerX],
+        [0, flipX * scaleStep, centerY],
+        [0, 0, 1]
+      ]);
     }
     /**
-     * The `inverse` function calculates the inverse of a square matrix using Gaussian elimination.
-     * @returns a Matrix object, which represents the inverse of the original matrix.
+     * The function scales a matrix by a given factor.
+     * @param {number} factor - The factor parameter is a number that represents the scaling factor by which the matrix
+     * should be scaled.
+     * @returns the result of multiplying a new instance of Matrix2D by the given factor.
      */
-    inverse() {
-      var _a;
-      if (this.rows !== this.cols) {
-        throw new Error("Matrix must be square for inversion.");
-      }
-      const augmentedMatrixData = [];
-      for (let i = 0; i < this.rows; i++) {
-        augmentedMatrixData[i] = this.data[i].slice();
-        for (let j = 0; j < this.cols; j++) {
-          augmentedMatrixData[i][this.cols + j] = i === j ? 1 : 0;
-        }
-      }
-      const augmentedMatrix = new _Matrix(augmentedMatrixData, {
-        rows: this.rows,
-        cols: this.cols * 2,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
-      for (let i = 0; i < this.rows; i++) {
-        let pivotRow = i;
-        while (pivotRow < this.rows && augmentedMatrix.get(pivotRow, i) === 0) {
-          pivotRow++;
-        }
-        if (pivotRow === this.rows) {
-          throw new Error("Matrix is singular, and its inverse does not exist.");
-        }
-        augmentedMatrix._swapRows(i, pivotRow);
-        const pivotElement = (_a = augmentedMatrix.get(i, i)) != null ? _a : 1;
-        if (pivotElement === 0) {
-          throw new Error("Matrix is singular, and its inverse does not exist (division by zero).");
-        }
-        augmentedMatrix._scaleRow(i, 1 / pivotElement);
-        for (let j = 0; j < this.rows; j++) {
-          if (j !== i) {
-            let factor = augmentedMatrix.get(j, i);
-            if (factor === void 0)
-              factor = 0;
-            augmentedMatrix._addScaledRow(j, i, -factor);
-          }
-        }
-      }
-      const inverseData = [];
-      for (let i = 0; i < this.rows; i++) {
-        inverseData[i] = augmentedMatrix.data[i].slice(this.cols);
-      }
-      return new _Matrix(inverseData, {
-        rows: this.rows,
-        cols: this.cols,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
+    static scale(factor) {
+      return _Matrix2D.multiplyByValue(new _Matrix2D(), factor);
     }
     /**
-     * The dot function calculates the dot product of two matrices and returns a new matrix.
-     * @param {Matrix} matrix - The `matrix` parameter is an instance of the `Matrix` class.
-     * @returns a new Matrix object.
+     * The function "rotate" takes an angle in radians and returns a 2D transformation matrix for rotating objects.
+     * @param {number} radians - The "radians" parameter is the angle in radians by which you want to rotate an object.
+     * @returns The code is returning a new instance of a Matrix2D object.
      */
-    dot(matrix) {
-      if (this.cols !== matrix.rows) {
-        throw new Error(
-          "Number of columns in the first matrix must be equal to the number of rows in the second matrix for dot product."
-        );
-      }
-      const resultData = [];
-      for (let i = 0; i < this.rows; i++) {
-        resultData[i] = [];
-        for (let j = 0; j < matrix.cols; j++) {
-          let sum;
-          for (let k = 0; k < this.cols; k++) {
-            const a = this.get(i, k), b = matrix.get(k, j);
-            if (a !== void 0 && b !== void 0) {
-              const multiplied = this.multiplyFn(a, b);
-              if (multiplied !== void 0) {
-                sum = this.addFn(sum, multiplied);
-              }
-            }
-          }
-          if (sum !== void 0)
-            resultData[i][j] = sum;
-        }
-      }
-      return new _Matrix(resultData, {
-        rows: this.rows,
-        cols: matrix.cols,
-        addFn: this.addFn,
-        subtractFn: this.subtractFn,
-        multiplyFn: this.multiplyFn
-      });
-    }
-    _addFn(a, b) {
-      if (a === void 0)
-        return b;
-      return a + b;
-    }
-    _subtractFn(a, b) {
-      return a - b;
-    }
-    _multiplyFn(a, b) {
-      return a * b;
+    static rotate(radians) {
+      const cos = Math.cos(radians);
+      const sin = Math.sin(radians);
+      return new _Matrix2D([
+        [cos, -sin, 0],
+        [sin, cos, 0],
+        [0, 0, 1]
+      ]);
     }
     /**
-     * The function checks if a given row and column index is valid within a specified range.
-     * @param {number} row - The `row` parameter represents the row index of a two-dimensional array or
-     * matrix. It is a number that indicates the specific row in the matrix.
-     * @param {number} col - The "col" parameter represents the column index in a two-dimensional array
-     * or grid. It is used to check if the given column index is valid within the bounds of the grid.
-     * @returns A boolean value is being returned.
+     * The translate function takes a 2D vector and returns a 2D matrix that represents a translation transformation.
+     * @param {Vector2D} vector - The parameter "vector" is of type Vector2D. It represents a 2D vector with components x
+     * and y, and an optional w component.
+     * @returns The method is returning a new instance of the Matrix2D class.
      */
-    isValidIndex(row, col) {
-      return row >= 0 && row < this.rows && col >= 0 && col < this.cols;
+    static translate(vector) {
+      return new _Matrix2D([
+        [1, 0, vector.x],
+        [0, 1, vector.y],
+        [0, 0, vector.w]
+      ]);
     }
     /**
-     * The function `_swapRows` swaps the positions of two rows in an array.
-     * @param {number} row1 - The `row1` parameter is the index of the first row that you want to swap.
-     * @param {number} row2 - The `row2` parameter is the index of the second row that you want to swap
-     * with the first row.
+     * The function "toVector" returns a new Vector2D object with the values from the first and second elements of the
+     * _matrix array.
+     * @returns A new instance of the Vector2D class is being returned. The values of the returned vector are taken from
+     * the first column of the matrix.
      */
-    _swapRows(row1, row2) {
-      const temp = this.data[row1];
-      this.data[row1] = this.data[row2];
-      this.data[row2] = temp;
-    }
-    /**
-     * The function scales a specific row in a matrix by a given scalar value.
-     * @param {number} row - The `row` parameter represents the index of the row in the matrix that you
-     * want to scale. It is a number that indicates the position of the row within the matrix.
-     * @param {number} scalar - The scalar parameter is a number that is used to multiply each element in
-     * a specific row of a matrix.
-     */
-    _scaleRow(row, scalar) {
-      for (let j = 0; j < this.cols; j++) {
-        let multiplied = this.multiplyFn(this.data[row][j], scalar);
-        if (multiplied === void 0)
-          multiplied = 0;
-        this.data[row][j] = multiplied;
-      }
-    }
-    /**
-     * The function `_addScaledRow` multiplies a row in a matrix by a scalar value and adds it to another
-     * row.
-     * @param {number} targetRow - The targetRow parameter represents the index of the row in which the
-     * scaled values will be added.
-     * @param {number} sourceRow - The sourceRow parameter represents the index of the row from which the
-     * values will be scaled and added to the targetRow.
-     * @param {number} scalar - The scalar parameter is a number that is used to scale the values in the
-     * source row before adding them to the target row.
-     */
-    _addScaledRow(targetRow, sourceRow, scalar) {
-      for (let j = 0; j < this.cols; j++) {
-        let multiplied = this.multiplyFn(this.data[sourceRow][j], scalar);
-        if (multiplied === void 0)
-          multiplied = 0;
-        const scaledValue = multiplied;
-        let added = this.addFn(this.data[targetRow][j], scaledValue);
-        if (added === void 0)
-          added = 0;
-        this.data[targetRow][j] = added;
-      }
+    toVector() {
+      return new Vector2D(this._matrix[0][0], this._matrix[1][0]);
     }
   };
 
@@ -11663,19 +11996,18 @@ var dataStructureTyped = (() => {
     }
   };
   var Trie = class _Trie extends IterableElementBase {
-    constructor(words = [], options) {
+    constructor(words, caseSensitive = true) {
       super();
-      __publicField(this, "_size", 0);
-      __publicField(this, "_caseSensitive", true);
-      __publicField(this, "_root", new TrieNode(""));
-      if (options) {
-        const { caseSensitive } = options;
-        if (caseSensitive !== void 0)
-          this._caseSensitive = caseSensitive;
-      }
+      __publicField(this, "_size");
+      __publicField(this, "_caseSensitive");
+      __publicField(this, "_root");
+      this._root = new TrieNode("");
+      this._caseSensitive = caseSensitive;
+      this._size = 0;
       if (words) {
-        for (const word of words)
+        for (const word of words) {
           this.add(word);
+        }
       }
     }
     get size() {
