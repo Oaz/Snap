@@ -91,7 +91,7 @@ modules.gui = '2026-September-02';
 
 // Declarations
 
-var SnapVersion = '12.1.0';
+var SnapVersion = '12.1.0-oaz';
 
 var IDE_Morph;
 var ProjectDialogMorph;
@@ -5812,6 +5812,7 @@ IDE_Morph.prototype.aboutSnap = function () {
         + 'from the Lifelong Kindergarten group at the MIT Media Lab\n\n'
 
         + 'for more information see https://snap.berkeley.edu';
+        + '\n\nCustom version by Oaz. Source code at: https://github.com/Oaz/Snap';
 
     noticeTxt = localize('License')
         + '\n\n'
