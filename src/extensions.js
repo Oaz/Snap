@@ -1796,6 +1796,30 @@ SnapExtensions.primitives.set(
     }
 );
 
+SnapExtensions.primitives.set(
+    'src_unload(url)',
+    function (url, proc) {
+        if (!proc.context.accumulator) {
+            proc.context.accumulator = {done: false};
+            if (!contains(SnapExtensions.scripts, url)) {
+                return;
+            }
+            for (const scriptElement of document.scripts) {
+                if(scriptElement.src && scriptElement.src.endsWith(url)) {
+                    scriptElement.remove();
+                    const index = SnapExtensions.scripts.indexOf(url);
+                    SnapExtensions.scripts.splice(index, 1);
+                    proc.context.accumulator.done = true;
+                }
+            }
+        } else if (proc.context.accumulator.done) {
+            return;
+        }
+        proc.pushContext('doYield');
+        proc.pushContext();
+    }
+);
+
 // Menus
 
 SnapExtensions.menus.set(

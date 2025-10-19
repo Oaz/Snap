@@ -196,7 +196,7 @@ SpriteMorph.prototype.isCachingPrimitives = true;
 
 SpriteMorph.prototype.enableNesting = true;
 SpriteMorph.prototype.enableFirstClass = true;
-SpriteMorph.prototype.showingExtensions = false;
+SpriteMorph.prototype.showingExtensions = true;
 SpriteMorph.prototype.useFlatLineEnds = false;
 SpriteMorph.prototype.penColorModel = 'hsv'; // or 'hsl'
 SpriteMorph.prototype.disableDraggingData = false;
