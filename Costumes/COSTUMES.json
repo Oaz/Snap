@@ -3331,5 +3331,156 @@
     "name": "wizard",
     "translations": {
     }
+  },
+  {
+    "fileName": "multibox.svg",
+    "name": "multibox",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-empty.svg",
+    "name": "multibox empty",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-empty-a.svg",
+    "name": "multibox empty a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-empty-b.svg",
+    "name": "multibox empty b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-hole.svg",
+    "name": "multibox hole",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-hole-a.svg",
+    "name": "multibox hole a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-hole-b.svg",
+    "name": "multibox hole b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-horizontal.svg",
+    "name": "multibox horizontal",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-horizontal-a.svg",
+    "name": "multibox horizontal a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-horizontal-b.svg",
+    "name": "multibox horizontal b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-vertical.svg",
+    "name": "multibox vertical",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-vertical-a.svg",
+    "name": "multibox vertical a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-vertical-b.svg",
+    "name": "multibox vertical b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-left.svg",
+    "name": "multibox up left",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-left-a.svg",
+    "name": "multibox up left a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-left-b.svg",
+    "name": "multibox up left b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-right.svg",
+    "name": "multibox up right",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-right-a.svg",
+    "name": "multibox up right a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-up-right-b.svg",
+    "name": "multibox up right b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-left.svg",
+    "name": "multibox down left",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-left-a.svg",
+    "name": "multibox down left a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-left-b.svg",
+    "name": "multibox down left b",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-right.svg",
+    "name": "multibox down right",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-right-a.svg",
+    "name": "multibox down right a",
+    "translations": {
+    }
+  },
+  {
+    "fileName": "multibox-down-right-b.svg",
+    "name": "multibox down right b",
+    "translations": {
+    }
   }
 ]
+
