@@ -3287,5 +3287,68 @@
     ],
     "translations": {
     }
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "oaz/regular_expressions.xml",
+    "name": "Regular expressions",
+    "description": "Search and replace in strings with regular expressions.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/MoreControl.xml",
+    "name": "More control",
+    "description": "Additional control blocks.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/MoreLists.xml",
+    "name": "More lists",
+    "description": "Additional list functions.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/MoreStreams.xml",
+    "name": "More streams",
+    "description": "Additional stream functions.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/MoreOperators.xml",
+    "name": "More operators",
+    "description": "Additional text and numbers manipulation functions.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
   }
 ]
