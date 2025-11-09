@@ -38,5 +38,9 @@
   {
     "fileName": "vee.xml",
     "name": "Vee"
+  },
+  {
+    "fileName": "oaz/DataStructure_TestSuite.xml",
+    "name": "DataStructure TestSuite"
   }
 ]

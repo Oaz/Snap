@@ -3344,5 +3344,65 @@
     ],
     "translations": {
     }
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "oaz/Dictionaries.xml",
+    "name": "Dictionaries",
+    "description": "Data structures associating keys and values using hashmap.",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/DataStructure.xml",
+    "name": "Data structure",
+    "description": "Miscellaneous data structures from https://data-structure-typed-docs.vercel.app/",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "~",
+    "name": "~"
+  },
+  {
+    "fileName": "oaz/SUnit!1.xml",
+    "name": "SUnit! v1",
+    "description": "Unit Tests Framework v1",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
+  },
+  {
+    "fileName": "oaz/SUnit!2.xml",
+    "name": "SUnit! v2",
+    "description": "Unit Tests Framework v2",
+    "searchData": [
+    ],
+    "categories": [
+    ],
+    "translations": {
+    }
   }
 ]
