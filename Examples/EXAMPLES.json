@@ -41,6 +41,10 @@
   },
   {
     "fileName": "oaz/DataStructure_TestSuite.xml",
-    "name": "DataStructure TestSuite"
+    "name": "_ DataStructure TestSuite"
+  },
+  {
+    "fileName": "oaz/CdL-2025-partie-1",
+    "name": "_ Capitole du Libre 2025 - Partie 1"
   }
 ]
