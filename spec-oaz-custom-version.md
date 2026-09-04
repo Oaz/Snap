@@ -278,3 +278,30 @@ After applying changes, verify:
 | extensions.js | New primitive | ~20 | Medium |
 | COSTUMES.json | Array entries | Multiple | Low |
 | LIBRARIES.json | Array entries | Multiple | Low |
+
+---
+
+## Rebase Insights
+
+This section documents key insights discovered during the rebase operation of Oaz custom changes onto upstream/master (v12.1).
+
+### 1. Upstream Does Not Include Custom Features
+The upstream/master (v12.1) does NOT have the "Custom version by Oaz" text in the about box. Custom changes remain truly custom and need to be preserved during rebase operations. However, it's still good practice to verify what's present in upstream.
+
+### 2. Conflict Resolution Strategy
+When rebasing custom changes onto a new upstream version:
+- **Version strings (gui.js)**: Append `-oaz` to whatever version upstream has, not a hardcoded version
+- **Script tags (snap.html)**: Keep upstream version numbers, apply only configuration changes
+- **JSON files (COSTUMES.json, LIBRARIES.json)**: Merge upstream additions with custom entries
+- Use `git show HEAD:filename` to extract clean upstream versions during conflict resolution
+
+### 3. Category Field Availability
+Upstream Snap! v12.1 introduced the `category` field for costumes. Custom costumes should utilize this field for better organization.
+
+### 4. String Concatenation Care
+JavaScript string concatenation in gui.js is sensitive to proper quote and semicolon placement. When editing multi-line string concatenations, ensure each segment is properly closed.
+
+### 5. Recommended Tooling
+- Use `git show HEAD:filename` to extract clean upstream versions
+- Use `git diff --cached` to verify staged changes before continuing rebase
+- Use `GIT_EDITOR=true` to avoid editor prompts during rebase
