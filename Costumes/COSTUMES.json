@@ -3889,150 +3889,175 @@
     "fileName": "multibox.svg",
     "name": "multibox",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-empty.svg",
     "name": "multibox empty",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-empty-a.svg",
     "name": "multibox empty a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-empty-b.svg",
     "name": "multibox empty b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-hole.svg",
     "name": "multibox hole",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-hole-a.svg",
     "name": "multibox hole a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-hole-b.svg",
     "name": "multibox hole b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-horizontal.svg",
     "name": "multibox horizontal",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-horizontal-a.svg",
     "name": "multibox horizontal a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-horizontal-b.svg",
     "name": "multibox horizontal b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-vertical.svg",
     "name": "multibox vertical",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-vertical-a.svg",
     "name": "multibox vertical a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-vertical-b.svg",
     "name": "multibox vertical b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-left.svg",
     "name": "multibox up left",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-left-a.svg",
     "name": "multibox up left a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-left-b.svg",
     "name": "multibox up left b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-right.svg",
     "name": "multibox up right",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-right-a.svg",
     "name": "multibox up right a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-up-right-b.svg",
     "name": "multibox up right b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-left.svg",
     "name": "multibox down left",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-left-a.svg",
     "name": "multibox down left a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-left-b.svg",
     "name": "multibox down left b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-right.svg",
     "name": "multibox down right",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-right-a.svg",
     "name": "multibox down right a",
     "translations": {
-    }
+    },
+    "category": "oaz"
   },
   {
     "fileName": "multibox-down-right-b.svg",
     "name": "multibox down right b",
     "translations": {
-    }
+    },
+    "category": "oaz"
   }
 ]
