@@ -1,0 +1,4 @@
+deployment:
+  tasks:
+    - export DEPLOYPATH=~/sites/public/snap.mnt.space/
+    - /bin/rsync -aP --exclude-from='exclude' ./ ${DEPLOYPATH}
