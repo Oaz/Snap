@@ -1,4 +1,6 @@
 deployment:
   tasks:
-    - export DEPLOYPATH=~/sites/public/snap.mnt.space/
-    - /bin/rsync -aP --exclude-from='exclude' ./ ${DEPLOYPATH}
+    - export DEPLOYPATH=~/sites/public/snap.mnt.space
+    - /bin/rsync -aP --exclude-from='exclude' ./ ${DEPLOYPATH}/
+    - /bin/find ${DEPLOYPATH} -type d -exec /bin/chmod 755 {} \;
+    - /bin/find ${DEPLOYPATH} -type f -exec /bin/chmod 644 {} \;
