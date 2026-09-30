@@ -58,5 +58,9 @@
   {
     "fileName": "oaz/BDXIO-2026-part-1.xml",
     "name": "_ BDX I/O 2026 - Partie 1"
+  },
+  {
+    "fileName": "oaz/BDXIO-2026-part-2.xml",
+    "name": "_ BDX I/O 2026 - Partie 2"
   }
 ]
