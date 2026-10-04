@@ -56,23 +56,7 @@
     "name": "_ Capitole du Libre 2025 - Partie 2b"
   },
   {
-    "fileName": "oaz/BDXIO-2026-part-1.xml",
-    "name": "_ BDX I/O 2026 - Partie 1"
-  },
-  {
-    "fileName": "oaz/BDXIO-2026-part-2.xml",
-    "name": "_ BDX I/O 2026 - Partie 2"
-  },
-  {
-    "fileName": "oaz/BDXIO-2026-part-3.xml",
-    "name": "_ BDX I/O 2026 - Partie 3"
-  },
-  {
-    "fileName": "oaz/BDXIO-2026-part-4.xml",
-    "name": "_ BDX I/O 2026 - Partie 4"
-  },
-  {
-    "fileName": "oaz/BDXIO-2026-part-5.xml",
-    "name": "_ BDX I/O 2026 - Partie 5"
+    "fileName": "oaz/BDXIO-2026.xml",
+    "name": "_ BDX I/O 2026"
   }
 ]
