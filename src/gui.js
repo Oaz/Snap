@@ -6084,7 +6084,7 @@ IDE_Morph.prototype.newProject = function () {
     project.addDefaultScene();
     this.source = this.cloud.username ? 'cloud' : null;
     if (location.hash.substr(0, 6) !== '#lang:') {
-        location.hash = '';
+        //location.hash = '';
     }
     this.openProject(project);
 };
